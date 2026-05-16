@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 // IMPORTANT: Replace this with your actual Cloudflare Worker URL and your custom domain
-const WORKER_URL = "https://temp-mail-worker.YOUR_SUBDOMAIN.workers.dev";
+const WORKER_URL = "https://tempmails.sawyerbobk563.workers.dev/";
 const DOMAIN = "yourdomain.com";
 
 export default function Home() {
