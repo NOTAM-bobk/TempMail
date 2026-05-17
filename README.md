@@ -1,3 +1,9 @@
+# Upcoming features
+
+1. cloudlfare captacha + log in for mulit seasons and mulit devices
+2. ui updates ex. biger nav bar. fixed nav bar behind background. animations. more mail tools.
+3. embed to neomail.
+   
 # TempMail
 
 A temporary email service for quick and easy disposable email addresses.
