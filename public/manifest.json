@@ -1,1 +1,22 @@
-
+{
+  "name": "BurnerMail",
+  "short_name": "BurnerMail",
+  "description": "Instant disposable email addresses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06060f",
+  "theme_color": "#06060f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/mail.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/mail.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
