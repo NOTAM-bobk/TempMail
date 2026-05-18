@@ -175,9 +175,25 @@ const Icon = {
       <line x1="12" y1="3" x2="12" y2="6" /><line x1="12" y1="9" x2="12" y2="12" /><line x1="3" y1="12" x2="6" y2="12" /><line x1="9" y1="12" x2="12" y2="12" />
     </svg>
   ),
+  // Hamburger icon for accounts drawer
+  Hamburger: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  ),
+  Close: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  SwitchHoriz: ({ size = 13 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>
+    </svg>
+  ),
 };
 
-// ─── Animated spotlight background (autonomous, color-shifting) ───────────────
+// ─── Animated spotlight background ────────────────────────────────────────────
 function SpotlightBg({ lightMode }) {
   const ref = useRef(null);
   const colorRef = useRef({ t: 0 });
@@ -196,55 +212,44 @@ function SpotlightBg({ lightMode }) {
     const tick = () => {
       const c = colorRef.current;
       c.t += 0.003;
-
       const orbX = 50 + Math.sin(c.t * 0.7) * 30 + Math.cos(c.t * 0.4) * 15;
       const orbY = 40 + Math.cos(c.t * 0.5) * 25 + Math.sin(c.t * 0.3) * 12;
       const finalX = orbX * 0.7 + mx * 0.3;
       const finalY = orbY * 0.7 + my * 0.3;
-
       const hue = 220 + Math.sin(c.t * 0.4) * 60;
       const hue2 = 260 + Math.cos(c.t * 0.3) * 50;
       const hue3 = 200 + Math.sin(c.t * 0.25) * 40;
-
       const a1 = lightMode ? 0.08 : 0.13;
       const a2 = lightMode ? 0.06 : 0.10;
       const a3 = lightMode ? 0.05 : 0.09;
-
       el.style.setProperty("--mx", finalX + "%");
       el.style.setProperty("--my", finalY + "%");
       el.style.setProperty("--orb1-color", `hsla(${hue},80%,65%,${a1})`);
       el.style.setProperty("--orb2-color", `hsla(${hue2},75%,60%,${a2})`);
       el.style.setProperty("--orb3-color", `hsla(${hue3},70%,55%,${a3})`);
-
       animFrame = requestAnimationFrame(tick);
     };
 
     animFrame = requestAnimationFrame(tick);
-    return () => {
-      window.removeEventListener("mousemove", move);
-      cancelAnimationFrame(animFrame);
-    };
+    return () => { window.removeEventListener("mousemove", move); cancelAnimationFrame(animFrame); };
   }, [lightMode]);
 
   return (
-    <div ref={ref} style={{
-      position: "fixed", inset: 0, zIndex: 0, overflow: "hidden",
-      "--mx": "50%", "--my": "40%",
-      "--orb1-color": "rgba(99,102,241,0.13)",
-      "--orb2-color": "rgba(139,92,246,0.10)",
-      "--orb3-color": "rgba(59,130,246,0.09)",
-    }}>
+    <div ref={ref} style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", "--mx": "50%", "--my": "40%", "--orb1-color": "rgba(99,102,241,0.13)", "--orb2-color": "rgba(139,92,246,0.10)", "--orb3-color": "rgba(59,130,246,0.09)" }}>
       <div style={{ position: "absolute", inset: 0, background: lightMode ? "radial-gradient(ellipse 120% 80% at 50% 0%, #f0f0ff 0%, #e8eaf6 100%)" : "radial-gradient(ellipse 120% 80% at 50% 0%, #0d0d1a 0%, #060610 100%)", transition: "background 0.4s ease" }} />
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle 700px at var(--mx) var(--my), var(--orb1-color) 0%, transparent 70%)" }} />
       <div style={{ position: "absolute", width: 800, height: 800, top: -200, left: -150, background: "radial-gradient(circle, var(--orb2-color) 0%, transparent 65%)", borderRadius: "50%", animation: "orb1 18s ease-in-out infinite alternate" }} />
       <div style={{ position: "absolute", width: 700, height: 700, bottom: -150, right: -100, background: "radial-gradient(circle, var(--orb3-color) 0%, transparent 65%)", borderRadius: "50%", animation: "orb2 22s ease-in-out infinite alternate" }} />
       <div style={{ position: "absolute", width: 500, height: 500, top: "40%", left: "60%", background: "radial-gradient(circle, rgba(244,114,182,0.06) 0%, transparent 65%)", borderRadius: "50%", animation: "orb3 14s ease-in-out infinite alternate" }} />
+      {/* nano-mail inspired: subtle scanlines */}
+      <div className="scanlines" />
       <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
       <div style={{ position: "absolute", inset: 0, opacity: 0.3, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E")` }} />
       <style>{`
         @keyframes orb1 { from { transform: translate(0,0) scale(1); } to { transform: translate(120px,80px) scale(1.2); } }
         @keyframes orb2 { from { transform: translate(0,0) scale(1); } to { transform: translate(-90px,-100px) scale(1.15); } }
         @keyframes orb3 { from { transform: translate(0,0) scale(1) rotate(0deg); } to { transform: translate(-60px,80px) scale(1.3) rotate(45deg); } }
+        .scanlines { position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px); pointer-events:none; z-index:1; }
       `}</style>
     </div>
   );
@@ -256,8 +261,7 @@ function Toast({ toasts }) {
     <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
       {toasts.map(t => (
         <div key={t.id} style={{
-          background: "rgba(18,18,32,0.95)",
-          backdropFilter: "blur(20px)",
+          background: "rgba(18,18,32,0.95)", backdropFilter: "blur(20px)",
           border: `1px solid ${t.type === "error" ? "rgba(248,113,113,0.4)" : t.type === "success" ? "rgba(74,222,128,0.4)" : "rgba(255,255,255,0.12)"}`,
           color: t.type === "error" ? "#f87171" : t.type === "success" ? "#4ade80" : "#e2e8f0",
           padding: "10px 20px", borderRadius: 12, fontSize: 13, fontFamily: "var(--font-mono)",
@@ -311,12 +315,7 @@ function LoadingScreen({ onDone }) {
   const pct = ((TOTAL - count) / TOTAL) * 283;
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9000,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0d0d1a 0%, #060610 100%)",
-      transition: "opacity 0.6s ease", opacity: phase === "ready" ? 0 : 1,
-    }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0d0d1a 0%, #060610 100%)", transition: "opacity 0.6s ease", opacity: phase === "ready" ? 0 : 1 }}>
       <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
         <div style={{ position: "absolute", width: 600, height: 600, top: "10%", left: "20%", background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)", borderRadius: "50%", animation: "orb1 10s ease-in-out infinite alternate" }} />
         <div style={{ position: "absolute", width: 500, height: 500, bottom: "10%", right: "15%", background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)", borderRadius: "50%", animation: "orb2 13s ease-in-out infinite alternate" }} />
@@ -339,10 +338,14 @@ function LoadingScreen({ onDone }) {
           </div>
         </div>
       </div>
+      {/* nano-mail inspired tagline under loader */}
       <div style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 900, letterSpacing: "-0.8px", marginBottom: 8, zIndex: 1 }}>
         <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Burner</span>
         <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 400 }}>Mail</span>
       </div>
+      <p style={{ color: "rgba(255,255,255,0.18)", fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "3px", zIndex: 1, marginBottom: 6 }}>
+        FAST · PRIVATE · DISPOSABLE
+      </p>
       <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "var(--font-mono)", marginTop: 4, letterSpacing: "2px", zIndex: 1, animation: "phraseFade 1.8s infinite" }}>
         {phase === "ready" ? "✓ READY" : LOADING_PHRASES[phraseIdx]}
       </p>
@@ -355,7 +358,7 @@ function LoadingScreen({ onDone }) {
   );
 }
 
-// ─── Pill nav — bigger, transparent bg to match page ─────────────────────────
+// ─── Pill nav ─────────────────────────────────────────────────────────────────
 function PillNav({ tab, setTab, unread }) {
   const tabs = [
     { id: "inbox", label: "Inbox", icon: <Icon.Inbox size={17} /> },
@@ -388,14 +391,9 @@ function PillNav({ tab, setTab, unread }) {
           }}
         >
           {t.icon}
-          {/* Label hidden on very small screens via CSS class */}
           <span className="nav-label">{t.label}</span>
           {t.id === "inbox" && unread > 0 && (
-            <span style={{
-              position: "absolute", top: 8, right: 10,
-              background: "#f472b6", width: 7, height: 7,
-              borderRadius: "50%", border: "1.5px solid rgba(6,6,16,0.8)",
-            }} />
+            <span style={{ position: "absolute", top: 8, right: 10, background: "#f472b6", width: 7, height: 7, borderRadius: "50%", border: "1.5px solid rgba(6,6,16,0.8)" }} />
           )}
         </button>
       ))}
@@ -418,6 +416,136 @@ function Glass({ children, style = {}, ...props }) {
       {children}
     </div>
   );
+}
+
+// ─── Accounts Drawer ──────────────────────────────────────────────────────────
+function AccountsDrawer({ open, onClose, accounts, activeAddress, onSwitch, onDeleteAccount, onAddNew, newCooldown, loadingAddr }) {
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(6,6,16,0.6)", backdropFilter: "blur(4px)", animation: "fadeIn 0.2s ease" }}
+      />
+      {/* Drawer */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, bottom: 0, width: 300, maxWidth: "85vw",
+        zIndex: 401, display: "flex", flexDirection: "column",
+        background: "rgba(10,10,24,0.97)",
+        backdropFilter: "blur(30px) saturate(180%)",
+        borderRight: "1px solid rgba(255,255,255,0.09)",
+        boxShadow: "4px 0 40px rgba(0,0,0,0.6)",
+        animation: "drawerSlideIn 0.28s cubic-bezier(0.32,0.72,0,1)",
+      }}>
+        {/* Drawer header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, color: "#e2e8f0" }}>Inboxes</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: "1.5px", marginTop: 2 }}>
+              {accounts.length} ADDRESS{accounts.length !== 1 ? "ES" : ""}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ ...iconBtnBase("rgba(255,255,255,0.4)"), width: 32, height: 32, borderRadius: 8 }}>
+            <Icon.Close size={15} />
+          </button>
+        </div>
+
+        {/* Account list */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
+          {accounts.length === 0 && (
+            <div style={{ textAlign: "center", padding: "40px 16px", color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+              No saved inboxes yet
+            </div>
+          )}
+          {accounts.map((acc, i) => {
+            const isActive = acc.address === activeAddress;
+            const hue = hashStr(acc.address) % 360;
+            const initials = acc.address[0].toUpperCase();
+            return (
+              <div
+                key={acc.address}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "12px 10px", borderRadius: 12, marginBottom: 4,
+                  background: isActive ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
+                  border: isActive ? "1px solid rgba(99,102,241,0.35)" : "1px solid transparent",
+                  transition: "all 0.15s",
+                  animation: `fadeUp 0.3s ${i * 50}ms both ease`,
+                  cursor: isActive ? "default" : "pointer",
+                }}
+                onClick={() => !isActive && onSwitch(acc)}
+              >
+                {/* Avatar */}
+                <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: `hsl(${hue},40%,24%)`, border: `1px solid hsl(${hue},40%,34%)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, color: `hsl(${hue},60%,75%)`, userSelect: "none" }}>
+                  {initials}
+                </div>
+                {/* Address info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: isActive ? "#c7d2fe" : "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: isActive ? 500 : 400 }}>
+                    {acc.address}
+                  </div>
+                  {isActive && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#818cf8", letterSpacing: "1px", marginTop: 2 }}>● ACTIVE</div>
+                  )}
+                </div>
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {!isActive && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onSwitch(acc); }}
+                      title="Switch to this inbox"
+                      style={iconBtnBase("rgba(129,140,248,0.8)")}
+                    >
+                      <Icon.SwitchHoriz size={12} />
+                    </button>
+                  )}
+                  <button
+                    onClick={e => { e.stopPropagation(); onDeleteAccount(acc.address); }}
+                    title="Remove this inbox"
+                    style={iconBtnBase("rgba(248,113,113,0.6)")}
+                  >
+                    <Icon.Delete size={12} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Add new */}
+        <div style={{ padding: "14px 16px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <CooldownButton
+            icon={<Icon.New size={13} />}
+            label="Add new inbox"
+            onClick={() => { onAddNew(); onClose(); }}
+            cooldown={newCooldown}
+            limitMs={NEW_ADDR_LIMIT}
+            disabled={loadingAddr}
+            primary
+          />
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 10, textAlign: "center", letterSpacing: "1px" }}>
+            FAST · PRIVATE · DISPOSABLE
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes drawerSlideIn { from { transform: translateX(-100%); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+    </>
+  );
+}
+
+function iconBtnBase(color) {
+  return {
+    display: "flex", alignItems: "center", justifyContent: "center",
+    width: 28, height: 28, borderRadius: 7, border: "none",
+    background: "rgba(255,255,255,0.06)", cursor: "pointer",
+    color, transition: "background 0.15s",
+  };
 }
 
 // ─── Address card with custom email support ───────────────────────────────────
@@ -448,8 +576,15 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
       <div style={{ position: "absolute", top: -80, right: -80, width: 280, height: 280, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.10), transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: -60, left: -40, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(244,114,182,0.06), transparent 70%)", pointerEvents: "none" }} />
 
-      <div style={{ fontSize: 10, letterSpacing: "2.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-mono)", marginBottom: 10 }}>
-        Your temporary address
+      {/* nano-mail inspired: "FAST · PRIVATE · DISPOSABLE" tag */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 10, letterSpacing: "2.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-mono)" }}>
+          Your temporary address
+        </div>
+        <div style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(129,140,248,0.5)", fontFamily: "var(--font-mono)", display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "rgba(74,222,128,0.7)", animation: "livePulse 2s infinite" }} />
+          DISPOSABLE
+        </div>
       </div>
 
       {!customMode ? (
@@ -462,7 +597,12 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               fontStyle: loading ? "italic" : "normal",
             }}>
-              {loading ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner /> generating…</span> : address || "—"}
+              {loading
+                ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner /> generating…</span>
+                : address
+                  ? <span className="glitch-text" data-text={address}>{address}</span>
+                  : "—"
+              }
             </div>
             {address && !loading && (
               <button onClick={onCopy} style={btnStyle("ghost")}><Icon.Copy size={13} /> Copy</button>
@@ -565,12 +705,16 @@ function InboxView({ messages, onOpen, onDelete, onStar, onMarkRead, loading, st
   if (!filtered.length) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "56px 24px", color: "rgba(255,255,255,0.25)" }}>
-        <div style={{ opacity: 0.4 }}><Icon.Mail size={40} /></div>
+        <div style={{ opacity: 0.35, animation: "terminalPulse 3s ease-in-out infinite" }}><Icon.Mail size={40} /></div>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>
-          {search ? "No matching messages" : "No messages yet"}
+          {search ? "No matching messages" : "Waiting for mail"}
         </div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, textAlign: "center", lineHeight: 1.7, maxWidth: 260 }}>
-          {search ? "Try a different search term." : "Copy your address above and paste it anywhere — messages appear within seconds."}
+        {/* nano-mail inspired terminal cursor empty state */}
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, textAlign: "center", lineHeight: 1.7, maxWidth: 280, color: "rgba(255,255,255,0.28)" }}>
+          {search
+            ? "Try a different search term."
+            : <>Copy your address above and paste it anywhere.<br /><span style={{ color: "rgba(129,140,248,0.5)" }}>inbox listening<span className="term-cursor" /></span></>
+          }
         </div>
       </div>
     );
@@ -602,11 +746,8 @@ function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        display: "grid",
-        gridTemplateColumns: "40px 1fr auto",
-        gridTemplateRows: "auto auto",
-        columnGap: 12, rowGap: 2,
-        alignItems: "start",
+        display: "grid", gridTemplateColumns: "40px 1fr auto", gridTemplateRows: "auto auto",
+        columnGap: 12, rowGap: 2, alignItems: "start",
         padding: "14px 20px",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
         cursor: "pointer",
@@ -618,28 +759,15 @@ function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred
         position: "relative",
       }}
     >
-      {/* Avatar */}
-      <div style={{
-        gridRow: "span 2", width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-        background: `hsl(${hue},40%,28%)`,
-        border: `1px solid hsl(${hue},40%,38%)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700,
-        color: `hsl(${hue},60%,80%)`,
-        userSelect: "none",
-      }}>
+      <div style={{ gridRow: "span 2", width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: `hsl(${hue},40%,28%)`, border: `1px solid hsl(${hue},40%,38%)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700, color: `hsl(${hue},60%,80%)`, userSelect: "none" }}>
         {initials}
       </div>
-
-      {/* Sender + time */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
         {starred && <span style={{ color: "#fbbf24", flexShrink: 0 }}><Icon.StarFilled size={11} /></span>}
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: msg.seen ? 400 : 600, color: msg.seen ? "rgba(255,255,255,0.65)" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {msg.from?.address || "Unknown sender"}
         </span>
       </div>
-
-      {/* Time + actions */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, gridRow: "1", flexShrink: 0 }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{timeAgo(msg.createdAt)}</span>
         {hover && (
@@ -648,18 +776,12 @@ function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred
               {starred ? <Icon.StarFilled size={12} /> : <Icon.Star size={12} />}
             </button>
             {!msg.seen && (
-              <button onClick={onMarkRead} title="Mark as read" style={iconBtn("rgba(255,255,255,0.4)")}>
-                <Icon.MarkRead size={12} />
-              </button>
+              <button onClick={onMarkRead} title="Mark as read" style={iconBtn("rgba(255,255,255,0.4)")}><Icon.MarkRead size={12} /></button>
             )}
-            <button onClick={onDelete} title="Delete" style={iconBtn("rgba(248,113,113,0.7)")}>
-              <Icon.Delete size={12} />
-            </button>
+            <button onClick={onDelete} title="Delete" style={iconBtn("rgba(248,113,113,0.7)")}><Icon.Delete size={12} /></button>
           </div>
         )}
       </div>
-
-      {/* Subject */}
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: msg.seen ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {msg.subject || "(no subject)"}
       </div>
@@ -668,12 +790,7 @@ function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred
 }
 
 function iconBtn(color) {
-  return {
-    display: "flex", alignItems: "center", justifyContent: "center",
-    width: 24, height: 24, borderRadius: 6, border: "none",
-    background: "rgba(255,255,255,0.07)", cursor: "pointer",
-    color, transition: "background 0.15s",
-  };
+  return { display: "flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: 6, border: "none", background: "rgba(255,255,255,0.07)", cursor: "pointer", color, transition: "background 0.15s" };
 }
 
 // ─── Message viewer ───────────────────────────────────────────────────────────
@@ -707,29 +824,21 @@ function MessageViewer({ msg, onClose, onDelete, onStar, starred }) {
         @keyframes msgOverlayIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes msgPanelIn { from { opacity: 0; transform: translateY(40px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
       `}</style>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", background: "rgba(10,10,24,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.07)", animation: "msgPanelIn 0.35s cubic-bezier(0.32,0.72,0,1)", flexWrap: "wrap", rowGap: 8 }}>
         <button onClick={onClose} style={btnStyle("ghost")}><Icon.Back size={14} /> Back</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.subject || "(no subject)"}</div>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>From: {msg.from?.address || "Unknown"}</div>
         </div>
-        {/* Mail tools */}
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{new Date(msg.createdAt).toLocaleString()}</span>
           <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={{ ...btnStyle("ghost"), color: starred ? "#fbbf24" : undefined, padding: "7px 10px" }}>
             {starred ? <Icon.StarFilled size={13} /> : <Icon.Star size={13} />}
           </button>
-          <button onClick={downloadText} title="Download as .txt" style={{ ...btnStyle("ghost"), padding: "7px 10px" }}>
-            <Icon.Download size={13} />
-          </button>
-          <button onClick={() => onDelete(msg.id)} title="Delete" style={{ ...btnStyle("ghost"), color: "#f87171", padding: "7px 10px" }}>
-            <Icon.Delete size={13} />
-          </button>
+          <button onClick={downloadText} title="Download as .txt" style={{ ...btnStyle("ghost"), padding: "7px 10px" }}><Icon.Download size={13} /></button>
+          <button onClick={() => onDelete(msg.id)} title="Delete" style={{ ...btnStyle("ghost"), color: "#f87171", padding: "7px 10px" }}><Icon.Delete size={13} /></button>
         </div>
       </div>
-
-      {/* Body */}
       <div style={{ flex: 1, overflow: "auto", padding: "24px", animation: "msgPanelIn 0.4s 0.05s cubic-bezier(0.32,0.72,0,1) both" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
           {html ? (
@@ -754,6 +863,7 @@ const GuideView = memo(function GuideView() {
     { icon: <Icon.Inbox size={20} />, title: "Emails arrive automatically", body: "Your inbox auto-refreshes every 15 seconds. New emails show an unread indicator — click any to open." },
     { icon: <Icon.Star size={20} />, title: "Star & manage emails", body: "Hover a message to star it, mark it read, or delete it. Inside a message you can also download the content." },
     { icon: <Icon.Search size={20} />, title: "Search your inbox", body: "Use the search bar to filter messages by sender or subject instantly." },
+    { icon: <Icon.Hamburger size={20} />, title: "Multiple inboxes", body: "Tap the menu icon (top-left) to manage multiple addresses. Switch between them instantly — each keeps its own session." },
     { icon: <Icon.New size={20} />, title: "Need a fresh address?", body: "Hit New Address for a brand-new random one. Once per minute to prevent abuse." },
     { icon: <Icon.Settings size={20} />, title: "Your session is saved", body: "Your address and token are stored in a cookie for 30 days so you don't lose access on page refresh." },
   ];
@@ -774,7 +884,7 @@ const GuideView = memo(function GuideView() {
   );
 });
 
-// ─── Sun / Moon icons ─────────────────────────────────────────────────────────
+// ─── Sun / Moon ───────────────────────────────────────────────────────────────
 const SunIcon = () => (
   <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
@@ -873,6 +983,13 @@ export default function App() {
   const [starredIds, setStarredIds] = useState(() => new Set(JSON.parse(localStorage.getItem("bm_stars") || "[]")));
   const [search, setSearch] = useState("");
   const [deletedIds, setDeletedIds] = useState(() => new Set(JSON.parse(localStorage.getItem("bm_deleted") || "[]")));
+
+  // ── Multi-account state ──────────────────────────────────────────────────
+  const [accounts, setAccounts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("bm_accounts") || "[]"); } catch { return []; }
+  });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const pollRef = useRef(null);
   const cdRef = useRef(null);
 
@@ -912,6 +1029,54 @@ export default function App() {
     } catch { return []; }
   }, []);
 
+  // ── Save an account to the accounts array ────────────────────────────────
+  const saveAccount = useCallback((addr, pass, tok) => {
+    setAccounts(prev => {
+      const filtered = prev.filter(a => a.address !== addr);
+      const next = [...filtered, { address: addr, password: pass, token: tok }];
+      // keep max 10
+      const trimmed = next.slice(-10);
+      localStorage.setItem("bm_accounts", JSON.stringify(trimmed));
+      return trimmed;
+    });
+  }, []);
+
+  // ── Switch to a saved account ─────────────────────────────────────────────
+  const switchAccount = useCallback(async (acc) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setLoadingMsgs(true);
+    setMessages([]); setOpenMsg(null);
+    try {
+      // Re-auth to get fresh token
+      const { token: tok } = await apiFetch("/token", { method: "POST", body: JSON.stringify({ address: acc.address, password: acc.password }) });
+      Cookies.set("bm", { address: acc.address, password: acc.password, token: tok });
+      setAddress(acc.address); setToken(tok);
+      saveAccount(acc.address, acc.password, tok);
+      await fetchMessages(tok);
+      startPolling(tok);
+      showToast(`Switched to ${acc.address.split("@")[0]}@…`, "success");
+    } catch {
+      showToast("Could not switch inbox — token may have expired.", "error");
+    }
+    setLoadingMsgs(false);
+  }, [fetchMessages, startPolling, saveAccount, showToast]);
+
+  // ── Remove a saved account ────────────────────────────────────────────────
+  const deleteAccount = useCallback((addr) => {
+    setAccounts(prev => {
+      const next = prev.filter(a => a.address !== addr);
+      localStorage.setItem("bm_accounts", JSON.stringify(next));
+      return next;
+    });
+    // if deleting active, clear it
+    if (addr === address) {
+      Cookies.del("bm");
+      if (pollRef.current) clearInterval(pollRef.current);
+      setAddress(null); setToken(null); setMessages([]);
+    }
+    showToast("Inbox removed", "");
+  }, [address, showToast]);
+
   const createAddress = useCallback(async (silent = false) => {
     const wait = RateLimit.check("rl_new", NEW_ADDR_LIMIT);
     if (wait > 0) { showToast(`Wait ${Math.ceil(wait / 1000)}s before generating a new address`, "error"); return; }
@@ -927,12 +1092,13 @@ export default function App() {
       const { token: tok } = await apiFetch("/token", { method: "POST", body: JSON.stringify({ address: addr, password: pass }) });
       Cookies.set("bm", { address: addr, password: pass, token: tok });
       RateLimit.mark("rl_new");
+      saveAccount(addr, pass, tok);
       setAddress(addr); setToken(tok); setLoadingAddr(false);
       if (!silent) showToast("New address created", "success");
       await fetchMessages(tok);
       startPolling(tok);
     } catch (e) { setLoadingAddr(false); showToast("Failed: " + e.message, "error"); }
-  }, [fetchDomains, fetchMessages, startPolling, showToast]);
+  }, [fetchDomains, fetchMessages, startPolling, saveAccount, showToast]);
 
   const createCustomAddress = useCallback(async (customAddr) => {
     const wait = RateLimit.check("rl_new", NEW_ADDR_LIMIT);
@@ -945,6 +1111,7 @@ export default function App() {
       const { token: tok } = await apiFetch("/token", { method: "POST", body: JSON.stringify({ address: customAddr, password: pass }) });
       Cookies.set("bm", { address: customAddr, password: pass, token: tok });
       RateLimit.mark("rl_new");
+      saveAccount(customAddr, pass, tok);
       setAddress(customAddr); setToken(tok); setLoadingAddr(false);
       showToast("Custom address created!", "success");
       await fetchMessages(tok);
@@ -955,7 +1122,7 @@ export default function App() {
         showToast("That address is already taken — try another.", "error");
       } else { showToast("Failed: " + e.message, "error"); }
     }
-  }, [fetchMessages, startPolling, showToast]);
+  }, [fetchMessages, startPolling, saveAccount, showToast]);
 
   const handleRefresh = useCallback(async () => {
     const wait = RateLimit.check("rl_refresh", REFRESH_LIMIT);
@@ -1006,9 +1173,10 @@ export default function App() {
   const handleClearCookies = useCallback(() => {
     Cookies.del("bm"); localStorage.removeItem("rl_new"); localStorage.removeItem("rl_refresh");
     localStorage.removeItem("bm_stars"); localStorage.removeItem("bm_deleted");
+    localStorage.removeItem("bm_accounts");
     if (pollRef.current) clearInterval(pollRef.current);
     setAddress(null); setToken(null); setMessages([]);
-    setStarredIds(new Set()); setDeletedIds(new Set());
+    setStarredIds(new Set()); setDeletedIds(new Set()); setAccounts([]);
     showToast("All data cleared", "success");
   }, [showToast]);
 
@@ -1027,22 +1195,25 @@ export default function App() {
         const data = await apiFetch("/messages?page=1", {}, saved.token);
         setAddress(saved.address); setToken(saved.token);
         setMessages(data["hydra:member"] || []);
+        // ensure this account is in the list
+        if (saved.password) saveAccount(saved.address, saved.password, saved.token);
         startPolling(saved.token); return;
       } catch {}
     }
     await createAddress(true);
-  }, [createAddress, startPolling, fetchDomains]);
+  }, [createAddress, startPolling, fetchDomains, saveAccount]);
 
   const handleLoadingDone = useCallback(() => { setReady(true); boot(); }, [boot]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") setOpenMsg(null); };
+    const onKey = (e) => {
+      if (e.key === "Escape") { setOpenMsg(null); setDrawerOpen(false); }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Filter out deleted messages
   const visibleMessages = messages.filter(m => !deletedIds.has(m.id));
   const unread = visibleMessages.filter(m => !m.seen).length;
 
@@ -1057,6 +1228,27 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
         @keyframes livePulse { 0%,100%{box-shadow:0 0 0 3px rgba(74,222,128,0.2)} 50%{box-shadow:0 0 0 6px rgba(74,222,128,0.05)} }
+
+        /* nano-mail inspired: terminal cursor blink */
+        .term-cursor { display:inline-block; width:7px; height:12px; background:rgba(129,140,248,0.7); margin-left:3px; vertical-align:middle; animation:termBlink 1s steps(1) infinite; }
+        @keyframes termBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* nano-mail inspired: terminal pulse on mail icon */
+        @keyframes terminalPulse { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:0.55;transform:scale(1.06)} }
+
+        /* nano-mail inspired: subtle glitch on the address text */
+        .glitch-text { position:relative; }
+        .glitch-text::before,.glitch-text::after { content:attr(data-text); position:absolute; top:0; left:0; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+        .glitch-text::before { color:#818cf8; animation:glitch1 8s infinite; clip-path:polygon(0 0,100% 0,100% 35%,0 35%); opacity:0; }
+        .glitch-text::after  { color:#f472b6; animation:glitch2 8s infinite; clip-path:polygon(0 65%,100% 65%,100% 100%,0 100%); opacity:0; }
+        @keyframes glitch1 { 0%,94%,100%{opacity:0;transform:none} 95%{opacity:0.6;transform:translateX(-2px)} 96%{opacity:0;transform:translateX(2px)} 97%{opacity:0.4;transform:translateX(0)} }
+        @keyframes glitch2 { 0%,92%,100%{opacity:0;transform:none} 93%{opacity:0.5;transform:translateX(2px)} 94%{opacity:0;transform:translateX(-1px)} 95%{opacity:0.3;transform:translateX(0)} }
+
+        /* logo glitch */
+        .logo-glitch { position:relative; display:inline-block; }
+        .logo-glitch::before { content:attr(data-text); position:absolute; inset:0; background:linear-gradient(135deg,#818cf8,#f472b6,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:logoGlitch 10s infinite; opacity:0; }
+        @keyframes logoGlitch { 0%,88%,100%{opacity:0;transform:none} 89%{opacity:0.8;transform:translateX(-2px) skewX(-2deg)} 90%{opacity:0;transform:translateX(2px)} 91%{opacity:0.5;transform:none} }
+
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
@@ -1064,15 +1256,15 @@ export default function App() {
         input:focus { border-color: rgba(99,102,241,0.5) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
         select option { background: #0f0f1e; }
 
-        /* Mobile: hide logo text, keep only icon */
-        @media (max-width: 500px) {
-          .logo-text { display: none; }
-          .logo-img { display: flex !important; }
-          .nav-label { display: none; }
+        /* Mobile: icons only, no nav labels */
+        @media (max-width: 540px) {
+          .nav-label { display: none !important; }
+          .nav-btn { padding: 10px 12px !important; }
+          .logo-wordmark { display: none; }
         }
-        /* Tablet: show short label */
-        @media (min-width: 501px) {
+        @media (min-width: 541px) {
           .nav-label { display: inline; }
+          .logo-wordmark { display: inline; }
         }
       `}</style>
 
@@ -1084,15 +1276,14 @@ export default function App() {
 
           <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
-            {/* ── Header — transparent bg to match page ── */}
+            {/* ── Header — 3-col equal-weight for true center nav ── */}
             <header style={{
               display: "grid",
-              gridTemplateColumns: "auto 1fr auto",
+              gridTemplateColumns: "1fr auto 1fr",
               alignItems: "center",
-              gap: 12,
-              padding: "12px 20px",
+              gap: 8,
+              padding: "12px 16px",
               borderBottom: lightMode ? "1px solid rgba(0,0,0,0.07)" : "1px solid rgba(255,255,255,0.06)",
-              /* Transparent so SpotlightBg shows through — only a subtle blur overlay */
               background: lightMode ? "rgba(240,240,255,0.55)" : "rgba(6,6,16,0.45)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
@@ -1101,26 +1292,52 @@ export default function App() {
               transition: "background 0.3s ease",
             }}>
 
-              {/* Logo */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                <img
-                  src="/mail.png" alt="BurnerMail" width={26} height={26}
-                  style={{ borderRadius: 6, display: "block" }}
-                  onError={e => e.target.style.display = "none"}
-                />
-                <span className="logo-text" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", whiteSpace: "nowrap" }}>
-                  <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Burner</span>
-                  <span style={{ color: "rgba(255,255,255,0.38)", fontWeight: 400 }}>Mail</span>
-                </span>
+              {/* Left: hamburger + logo */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Hamburger button */}
+                <button
+                  onClick={() => setDrawerOpen(true)}
+                  title="Switch inbox"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.6)",
+                    transition: "all 0.18s",
+                    flexShrink: 0,
+                    position: "relative",
+                  }}
+                >
+                  <Icon.Hamburger size={16} />
+                  {/* badge: number of saved inboxes */}
+                  {accounts.length > 1 && (
+                    <span style={{ position: "absolute", top: -4, right: -4, background: "linear-gradient(135deg,#818cf8,#a78bfa)", color: "#fff", fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", border: "1.5px solid rgba(6,6,16,0.8)" }}>
+                      {accounts.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Logo */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <img
+                    src="/mail.png" alt="BurnerMail" width={26} height={26}
+                    style={{ borderRadius: 6, display: "block" }}
+                    onError={e => e.target.style.display = "none"}
+                  />
+                  <span className="logo-wordmark logo-glitch" data-text="Burner" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", whiteSpace: "nowrap" }}>
+                    <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Burner</span>
+                    <span style={{ color: "rgba(255,255,255,0.38)", fontWeight: 400 }}>Mail</span>
+                  </span>
+                </div>
               </div>
 
-              {/* Nav — centered */}
+              {/* Center: nav — perfectly centered in its own column */}
               <div style={{ display: "flex", justifyContent: "center" }}>
                 <PillNav tab={tab} setTab={setTab} unread={unread} />
               </div>
 
-              {/* Status dot */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flexShrink: 0 }}>
+              {/* Right: status dot */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                 <div style={{
                   width: 9, height: 9, borderRadius: "50%",
                   background: address && !loadingAddr ? "#4ade80" : "rgba(255,255,255,0.15)",
@@ -1148,7 +1365,6 @@ export default function App() {
                   />
 
                   <Glass style={{ overflow: "hidden", animation: "fadeUp 0.5s 80ms both ease" }}>
-                    {/* Inbox header */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
                       <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
                         <Icon.Inbox size={14} />
@@ -1162,7 +1378,6 @@ export default function App() {
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: 1 }}>AUTO · 15s</div>
                     </div>
 
-                    {/* Search bar */}
                     <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                       <SearchBar value={search} onChange={setSearch} />
                     </div>
@@ -1194,6 +1409,19 @@ export default function App() {
               )}
             </main>
           </div>
+
+          {/* Accounts drawer */}
+          <AccountsDrawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            accounts={accounts}
+            activeAddress={address}
+            onSwitch={switchAccount}
+            onDeleteAccount={deleteAccount}
+            onAddNew={() => createAddress(false)}
+            newCooldown={newCooldown}
+            loadingAddr={loadingAddr}
+          />
 
           {openMsg && (
             <MessageViewer
