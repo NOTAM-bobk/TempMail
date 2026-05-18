@@ -56,6 +56,12 @@ function timeAgo(iso) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return Math.abs(h);
+}
+
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = {
   Inbox: ({ size = 16 }) => (
@@ -127,6 +133,48 @@ const Icon = {
       <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   ),
+  Star: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+  StarFilled: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+  Archive: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" />
+    </svg>
+  ),
+  MarkRead: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  Download: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
+  ExternalLink: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  ),
+  Search: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  ),
+  QR: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="5" height="5" /><rect x="16" y="3" width="5" height="5" /><rect x="3" y="16" width="5" height="5" />
+      <line x1="21" y1="16" x2="21" y2="21" /><line x1="16" y1="21" x2="21" y2="21" /><line x1="16" y1="16" x2="16" y2="16" />
+      <line x1="12" y1="3" x2="12" y2="6" /><line x1="12" y1="9" x2="12" y2="12" /><line x1="3" y1="12" x2="6" y2="12" /><line x1="9" y1="12" x2="12" y2="12" />
+    </svg>
+  ),
 };
 
 // ─── Animated spotlight background (autonomous, color-shifting) ───────────────
@@ -185,47 +233,14 @@ function SpotlightBg({ lightMode }) {
       "--orb1-color": "rgba(99,102,241,0.13)",
       "--orb2-color": "rgba(139,92,246,0.10)",
       "--orb3-color": "rgba(59,130,246,0.09)",
-      transition: "background 0.4s ease",
     }}>
       <div style={{ position: "absolute", inset: 0, background: lightMode ? "radial-gradient(ellipse 120% 80% at 50% 0%, #f0f0ff 0%, #e8eaf6 100%)" : "radial-gradient(ellipse 120% 80% at 50% 0%, #0d0d1a 0%, #060610 100%)", transition: "background 0.4s ease" }} />
-      {/* Main autonomous orb */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "radial-gradient(circle 700px at var(--mx) var(--my), var(--orb1-color) 0%, transparent 70%)",
-      }} />
-      {/* Secondary drifting orb */}
-      <div style={{
-        position: "absolute", width: 800, height: 800,
-        top: -200, left: -150,
-        background: "radial-gradient(circle, var(--orb2-color) 0%, transparent 65%)",
-        borderRadius: "50%",
-        animation: "orb1 18s ease-in-out infinite alternate",
-      }} />
-      {/* Third orb */}
-      <div style={{
-        position: "absolute", width: 700, height: 700,
-        bottom: -150, right: -100,
-        background: "radial-gradient(circle, var(--orb3-color) 0%, transparent 65%)",
-        borderRadius: "50%",
-        animation: "orb2 22s ease-in-out infinite alternate",
-      }} />
-      {/* Extra accent orb */}
-      <div style={{
-        position: "absolute", width: 500, height: 500,
-        top: "40%", left: "60%",
-        background: "radial-gradient(circle, rgba(244,114,182,0.06) 0%, transparent 65%)",
-        borderRadius: "50%",
-        animation: "orb3 14s ease-in-out infinite alternate",
-      }} />
-      <div style={{
-        position: "absolute", inset: 0,
-        backgroundImage: "linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.3,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E")`,
-      }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle 700px at var(--mx) var(--my), var(--orb1-color) 0%, transparent 70%)" }} />
+      <div style={{ position: "absolute", width: 800, height: 800, top: -200, left: -150, background: "radial-gradient(circle, var(--orb2-color) 0%, transparent 65%)", borderRadius: "50%", animation: "orb1 18s ease-in-out infinite alternate" }} />
+      <div style={{ position: "absolute", width: 700, height: 700, bottom: -150, right: -100, background: "radial-gradient(circle, var(--orb3-color) 0%, transparent 65%)", borderRadius: "50%", animation: "orb2 22s ease-in-out infinite alternate" }} />
+      <div style={{ position: "absolute", width: 500, height: 500, top: "40%", left: "60%", background: "radial-gradient(circle, rgba(244,114,182,0.06) 0%, transparent 65%)", borderRadius: "50%", animation: "orb3 14s ease-in-out infinite alternate" }} />
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+      <div style={{ position: "absolute", inset: 0, opacity: 0.3, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E")` }} />
       <style>{`
         @keyframes orb1 { from { transform: translate(0,0) scale(1); } to { transform: translate(120px,80px) scale(1.2); } }
         @keyframes orb2 { from { transform: translate(0,0) scale(1); } to { transform: translate(-90px,-100px) scale(1.15); } }
@@ -241,7 +256,7 @@ function Toast({ toasts }) {
     <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
       {toasts.map(t => (
         <div key={t.id} style={{
-          background: "rgba(18,18,32,0.92)",
+          background: "rgba(18,18,32,0.95)",
           backdropFilter: "blur(20px)",
           border: `1px solid ${t.type === "error" ? "rgba(248,113,113,0.4)" : t.type === "success" ? "rgba(74,222,128,0.4)" : "rgba(255,255,255,0.12)"}`,
           color: t.type === "error" ? "#f87171" : t.type === "success" ? "#4ade80" : "#e2e8f0",
@@ -258,7 +273,7 @@ function Toast({ toasts }) {
   );
 }
 
-// ─── Loading messages that cycle ──────────────────────────────────────────────
+// ─── Loading phrases ──────────────────────────────────────────────────────────
 const LOADING_PHRASES = [
   "SETTING UP YOUR INBOX…",
   "SPAWNING A FRESH ADDRESS…",
@@ -267,7 +282,7 @@ const LOADING_PHRASES = [
   "JUST A MOMENT…",
 ];
 
-// ─── Loading screen — 5 second countdown ─────────────────────────────────────
+// ─── Loading screen ───────────────────────────────────────────────────────────
 function LoadingScreen({ onDone }) {
   const TOTAL = 5;
   const [count, setCount] = useState(TOTAL);
@@ -275,21 +290,14 @@ function LoadingScreen({ onDone }) {
   const [phraseIdx, setPhraseIdx] = useState(0);
 
   useEffect(() => {
-    // Cycle phrases every ~2s
-    const phraseInterval = setInterval(() => {
-      setPhraseIdx(i => (i + 1) % LOADING_PHRASES.length);
-    }, 1800);
+    const phraseInterval = setInterval(() => setPhraseIdx(i => (i + 1) % LOADING_PHRASES.length), 1800);
     return () => clearInterval(phraseInterval);
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCount(c => {
-        if (c <= 1) {
-          clearInterval(interval);
-          setPhase("ready");
-          return 0;
-        }
+        if (c <= 1) { clearInterval(interval); setPhase("ready"); return 0; }
         return c - 1;
       });
     }, 1000);
@@ -297,10 +305,7 @@ function LoadingScreen({ onDone }) {
   }, []);
 
   useEffect(() => {
-    if (phase === "ready") {
-      const t = setTimeout(onDone, 600);
-      return () => clearTimeout(t);
-    }
+    if (phase === "ready") { const t = setTimeout(onDone, 600); return () => clearTimeout(t); }
   }, [phase, onDone]);
 
   const pct = ((TOTAL - count) / TOTAL) * 283;
@@ -310,15 +315,12 @@ function LoadingScreen({ onDone }) {
       position: "fixed", inset: 0, zIndex: 9000,
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0d0d1a 0%, #060610 100%)",
-      transition: "opacity 0.6s ease",
-      opacity: phase === "ready" ? 0 : 1,
+      transition: "opacity 0.6s ease", opacity: phase === "ready" ? 0 : 1,
     }}>
-      {/* Animated background blobs on loading screen */}
       <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
         <div style={{ position: "absolute", width: 600, height: 600, top: "10%", left: "20%", background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)", borderRadius: "50%", animation: "orb1 10s ease-in-out infinite alternate" }} />
         <div style={{ position: "absolute", width: 500, height: 500, bottom: "10%", right: "15%", background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)", borderRadius: "50%", animation: "orb2 13s ease-in-out infinite alternate" }} />
       </div>
-
       <div style={{ position: "relative", marginBottom: 32, zIndex: 1 }}>
         <svg width={100} height={100} viewBox="0 0 96 96" style={{ transform: "rotate(-90deg)", filter: "drop-shadow(0 0 20px rgba(129,140,248,0.3))" }}>
           <circle cx="48" cy="48" r="45" fill="none" stroke="rgba(99,102,241,0.12)" strokeWidth="4" />
@@ -331,30 +333,19 @@ function LoadingScreen({ onDone }) {
             </linearGradient>
           </defs>
         </svg>
-        <div style={{
-          position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ color: "#e2e8f0", fontSize: 24, fontFamily: "var(--font-display)", fontWeight: 800, lineHeight: 1 }}>
             {phase === "ready" ? <Icon.Check size={24} /> : count}
           </div>
         </div>
       </div>
-
       <div style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 900, letterSpacing: "-0.8px", marginBottom: 8, zIndex: 1 }}>
         <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Burner</span>
         <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 400 }}>Mail</span>
       </div>
-
-      <p style={{
-        color: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "var(--font-mono)",
-        marginTop: 4, letterSpacing: "2px", zIndex: 1,
-        transition: "opacity 0.4s ease",
-        animation: "phraseFade 1.8s infinite",
-        key: phraseIdx,
-      }}>
+      <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "var(--font-mono)", marginTop: 4, letterSpacing: "2px", zIndex: 1, animation: "phraseFade 1.8s infinite" }}>
         {phase === "ready" ? "✓ READY" : LOADING_PHRASES[phraseIdx]}
       </p>
-
       <style>{`
         @keyframes phraseFade { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
         @keyframes orb1 { from { transform: translate(0,0) scale(1); } to { transform: translate(80px,60px) scale(1.15); } }
@@ -364,7 +355,7 @@ function LoadingScreen({ onDone }) {
   );
 }
 
-// ─── Icon-only pill nav ───────────────────────────────────────────────────────
+// ─── Pill nav — bigger, transparent bg to match page ─────────────────────────
 function PillNav({ tab, setTab, unread }) {
   const tabs = [
     { id: "inbox", label: "Inbox", icon: <Icon.Inbox size={17} /> },
@@ -373,12 +364,12 @@ function PillNav({ tab, setTab, unread }) {
   ];
   return (
     <div style={{
-      display: "inline-flex", alignItems: "center", gap: 2,
-      background: "rgba(255,255,255,0.05)",
+      display: "inline-flex", alignItems: "center", gap: 3,
+      background: "rgba(255,255,255,0.06)",
       border: "1px solid rgba(255,255,255,0.11)",
-      borderRadius: 999, padding: "4px",
+      borderRadius: 999, padding: "5px",
       backdropFilter: "blur(20px)",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07)",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
     }}>
       {tabs.map(t => (
         <button
@@ -386,19 +377,22 @@ function PillNav({ tab, setTab, unread }) {
           onClick={() => setTab(t.id)}
           title={t.label}
           style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            width: 40, height: 40, borderRadius: 999, border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+            padding: "10px 18px", borderRadius: 999, border: "none", cursor: "pointer",
             transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
             background: tab === t.id ? "linear-gradient(135deg,rgba(99,102,241,0.8),rgba(139,92,246,0.7))" : "transparent",
             color: tab === t.id ? "#fff" : "rgba(255,255,255,0.45)",
             boxShadow: tab === t.id ? "0 2px 14px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.15)" : "none",
             position: "relative",
+            fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
           }}
         >
           {t.icon}
+          {/* Label hidden on very small screens via CSS class */}
+          <span className="nav-label">{t.label}</span>
           {t.id === "inbox" && unread > 0 && (
             <span style={{
-              position: "absolute", top: 7, right: 7,
+              position: "absolute", top: 8, right: 10,
               background: "#f472b6", width: 7, height: 7,
               borderRadius: "50%", border: "1.5px solid rgba(6,6,16,0.8)",
             }} />
@@ -434,15 +428,14 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
   const [customError, setCustomError] = useState("");
 
   useEffect(() => {
-    if (availableDomains.length && !selectedDomain) {
-      setSelectedDomain(availableDomains[0]);
-    }
-  }, [availableDomains]);
+    if (availableDomains.length && !selectedDomain) setSelectedDomain(availableDomains[0]);
+  }, [availableDomains, selectedDomain]);
 
   const handleCustomSubmit = () => {
     const local = customLocal.trim().toLowerCase();
     if (!local) { setCustomError("Enter a username."); return; }
     if (!/^[a-z0-9._+-]+$/.test(local)) { setCustomError("Only letters, numbers, . _ + - allowed."); return; }
+    if (local.length < 3) { setCustomError("At least 3 characters."); return; }
     if (!selectedDomain) { setCustomError("No domain available."); return; }
     setCustomError("");
     onSetCustom(local + "@" + selectedDomain);
@@ -469,37 +462,15 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               fontStyle: loading ? "italic" : "normal",
             }}>
-              {loading ? (
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Spinner /> generating…
-                </span>
-              ) : address || "—"}
+              {loading ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner /> generating…</span> : address || "—"}
             </div>
             {address && !loading && (
-              <button onClick={onCopy} style={btnStyle("ghost")}>
-                <Icon.Copy size={13} /> Copy
-              </button>
+              <button onClick={onCopy} style={btnStyle("ghost")}><Icon.Copy size={13} /> Copy</button>
             )}
           </div>
-
           <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
-            <CooldownButton
-              icon={<Icon.New size={13} />}
-              label="New address"
-              onClick={onNew}
-              cooldown={newCooldown}
-              limitMs={NEW_ADDR_LIMIT}
-              disabled={loading}
-              primary
-            />
-            <CooldownButton
-              icon={<Icon.Refresh size={13} />}
-              label="Refresh"
-              onClick={onRefresh}
-              cooldown={refreshCooldown}
-              limitMs={REFRESH_LIMIT}
-              disabled={loading || !address}
-            />
+            <CooldownButton icon={<Icon.New size={13} />} label="New address" onClick={onNew} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} disabled={loading} primary />
+            <CooldownButton icon={<Icon.Refresh size={13} />} label="Refresh" onClick={onRefresh} cooldown={refreshCooldown} limitMs={REFRESH_LIMIT} disabled={loading || !address} />
             <button onClick={() => setCustomMode(true)} style={btnStyle("ghost")} disabled={loading || !availableDomains.length}>
               <Icon.Edit size={13} /> Custom
             </button>
@@ -507,9 +478,7 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
         </>
       ) : (
         <div style={{ animation: "fadeUp 0.25s ease" }}>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono)", marginBottom: 10 }}>
-            Choose your own username:
-          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono)", marginBottom: 10 }}>Choose your own username:</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <input
               autoFocus
@@ -517,26 +486,11 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
               onChange={e => { setCustomLocal(e.target.value); setCustomError(""); }}
               onKeyDown={e => e.key === "Enter" && handleCustomSubmit()}
               placeholder="username"
-              style={{
-                flex: 1, minWidth: 120,
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 10, padding: "9px 14px",
-                fontFamily: "var(--font-mono)", fontSize: 14, color: "#e2e8f0",
-                outline: "none",
-              }}
+              style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 14px", fontFamily: "var(--font-mono)", fontSize: 14, color: "#e2e8f0", outline: "none" }}
             />
             <span style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-mono)", fontSize: 14, whiteSpace: "nowrap" }}>@</span>
             {availableDomains.length > 1 ? (
-              <select
-                value={selectedDomain}
-                onChange={e => setSelectedDomain(e.target.value)}
-                style={{
-                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 10, padding: "9px 12px",
-                  fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0",
-                  outline: "none", cursor: "pointer",
-                }}
-              >
+              <select value={selectedDomain} onChange={e => setSelectedDomain(e.target.value)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0", outline: "none", cursor: "pointer" }}>
                 {availableDomains.map(d => <option key={d} value={d} style={{ background: "#0f0f1e" }}>{d}</option>)}
               </select>
             ) : (
@@ -545,16 +499,11 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
           </div>
           {customError && <div style={{ color: "#f87171", fontSize: 11, fontFamily: "var(--font-mono)", marginTop: 6 }}>{customError}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button onClick={handleCustomSubmit} style={btnStyle("primary")}>
-              <Icon.Check size={13} /> Use this address
-            </button>
-            <button onClick={() => { setCustomMode(false); setCustomError(""); }} style={btnStyle("ghost")}>
-              Cancel
-            </button>
+            <button onClick={handleCustomSubmit} style={btnStyle("primary")}><Icon.Check size={13} /> Use this address</button>
+            <button onClick={() => { setCustomMode(false); setCustomError(""); }} style={btnStyle("ghost")}>Cancel</button>
           </div>
         </div>
       )}
-      <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }`}</style>
     </Glass>
   );
 }
@@ -564,27 +513,10 @@ function CooldownButton({ icon, label, onClick, cooldown, limitMs, disabled, pri
   const pct = cooldown > 0 ? Math.round((1 - cooldown / limitMs) * 100) : 100;
   const isBlocked = cooldown > 0;
   const secs = Math.ceil(cooldown / 1000);
-
   return (
-    <button
-      onClick={!isBlocked && !disabled ? onClick : undefined}
-      disabled={isBlocked || disabled}
-      style={{
-        ...btnStyle(primary ? "primary" : "ghost"),
-        position: "relative", overflow: "hidden",
-        opacity: isBlocked || disabled ? 0.55 : 1,
-        cursor: isBlocked || disabled ? "not-allowed" : "pointer",
-      }}
-    >
-      {isBlocked && (
-        <span style={{
-          position: "absolute", inset: 0, left: 0,
-          background: "rgba(99,102,241,0.18)",
-          width: pct + "%",
-          transition: "width 0.5s linear",
-          borderRadius: "inherit",
-        }} />
-      )}
+    <button onClick={!isBlocked && !disabled ? onClick : undefined} disabled={isBlocked || disabled}
+      style={{ ...btnStyle(primary ? "primary" : "ghost"), position: "relative", overflow: "hidden", opacity: isBlocked || disabled ? 0.55 : 1, cursor: isBlocked || disabled ? "not-allowed" : "pointer" }}>
+      {isBlocked && <span style={{ position: "absolute", inset: 0, left: 0, background: "rgba(99,102,241,0.18)", width: pct + "%", transition: "width 0.5s linear", borderRadius: "inherit" }} />}
       <span style={{ position: "relative", display: "flex", alignItems: "center", gap: 6 }}>
         {isBlocked ? <><Icon.Clock size={13} /> {secs}s</> : <>{icon} {label}</>}
       </span>
@@ -592,8 +524,30 @@ function CooldownButton({ icon, label, onClick, cooldown, limitMs, disabled, pri
   );
 }
 
+// ─── Search bar ───────────────────────────────────────────────────────────────
+function SearchBar({ value, onChange }) {
+  return (
+    <div style={{ position: "relative", marginBottom: 0 }}>
+      <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", pointerEvents: "none" }}>
+        <Icon.Search size={14} />
+      </div>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Search messages…"
+        style={{
+          width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 12, padding: "10px 14px 10px 36px",
+          fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0",
+          outline: "none", transition: "border 0.2s",
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Inbox view ───────────────────────────────────────────────────────────────
-function InboxView({ messages, onOpen, loading }) {
+function InboxView({ messages, onOpen, onDelete, onStar, onMarkRead, loading, starredIds, search }) {
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "rgba(255,255,255,0.3)", gap: 10, fontFamily: "var(--font-mono)", fontSize: 13 }}>
@@ -601,65 +555,129 @@ function InboxView({ messages, onOpen, loading }) {
       </div>
     );
   }
-  if (!messages.length) {
+
+  const filtered = messages.filter(m => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (m.from?.address || "").toLowerCase().includes(q) || (m.subject || "").toLowerCase().includes(q);
+  });
+
+  if (!filtered.length) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "56px 24px", color: "rgba(255,255,255,0.25)" }}>
         <div style={{ opacity: 0.4 }}><Icon.Mail size={40} /></div>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>No messages yet</div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>
+          {search ? "No matching messages" : "No messages yet"}
+        </div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, textAlign: "center", lineHeight: 1.7, maxWidth: 260 }}>
-          Copy your address above and paste it anywhere — messages appear within seconds.
+          {search ? "Try a different search term." : "Copy your address above and paste it anywhere — messages appear within seconds."}
         </div>
       </div>
     );
   }
+
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      {messages.map((m, i) => (
-        <MessageRow key={m.id} msg={m} onClick={() => onOpen(m.id)} delay={i * 40} />
+      {filtered.map((m, i) => (
+        <MessageRow
+          key={m.id} msg={m} onClick={() => onOpen(m.id)} delay={i * 40}
+          onDelete={e => { e.stopPropagation(); onDelete(m.id); }}
+          onStar={e => { e.stopPropagation(); onStar(m.id); }}
+          onMarkRead={e => { e.stopPropagation(); onMarkRead(m.id); }}
+          starred={starredIds.has(m.id)}
+        />
       ))}
     </div>
   );
 }
 
-function MessageRow({ msg, onClick, delay }) {
+function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred }) {
   const [hover, setHover] = useState(false);
+  const initials = (msg.from?.address || "?")[0].toUpperCase();
+  const hue = hashStr(msg.from?.address || "") % 360;
+
   return (
     <div
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        display: "grid", gridTemplateColumns: "1fr auto", gridTemplateRows: "auto auto",
-        gap: "2px 12px", alignItems: "start",
-        padding: "16px 24px",
+        display: "grid",
+        gridTemplateColumns: "40px 1fr auto",
+        gridTemplateRows: "auto auto",
+        columnGap: 12, rowGap: 2,
+        alignItems: "start",
+        padding: "14px 20px",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
         cursor: "pointer",
         background: hover ? "rgba(255,255,255,0.04)" : "transparent",
         borderLeft: msg.seen ? "none" : "3px solid rgba(99,102,241,0.7)",
-        paddingLeft: msg.seen ? 24 : 21,
+        paddingLeft: msg.seen ? 20 : 17,
         transition: "background 0.15s",
         animation: `fadeUp 0.35s ${delay}ms both ease`,
+        position: "relative",
       }}
     >
+      {/* Avatar */}
       <div style={{
-        fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: msg.seen ? 400 : 600,
-        color: msg.seen ? "rgba(255,255,255,0.65)" : "#e2e8f0",
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>{msg.from?.address || "Unknown sender"}</div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", gridRow: "1", whiteSpace: "nowrap" }}>
-        {timeAgo(msg.createdAt)}
+        gridRow: "span 2", width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+        background: `hsl(${hue},40%,28%)`,
+        border: `1px solid hsl(${hue},40%,38%)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700,
+        color: `hsl(${hue},60%,80%)`,
+        userSelect: "none",
+      }}>
+        {initials}
       </div>
-      <div style={{
-        fontFamily: "var(--font-mono)", fontSize: 12,
-        color: msg.seen ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.6)",
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>{msg.subject || "(no subject)"}</div>
+
+      {/* Sender + time */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+        {starred && <span style={{ color: "#fbbf24", flexShrink: 0 }}><Icon.StarFilled size={11} /></span>}
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: msg.seen ? 400 : 600, color: msg.seen ? "rgba(255,255,255,0.65)" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {msg.from?.address || "Unknown sender"}
+        </span>
+      </div>
+
+      {/* Time + actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, gridRow: "1", flexShrink: 0 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{timeAgo(msg.createdAt)}</span>
+        {hover && (
+          <div style={{ display: "flex", gap: 2 }}>
+            <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={iconBtn(starred ? "#fbbf24" : "rgba(255,255,255,0.4)")}>
+              {starred ? <Icon.StarFilled size={12} /> : <Icon.Star size={12} />}
+            </button>
+            {!msg.seen && (
+              <button onClick={onMarkRead} title="Mark as read" style={iconBtn("rgba(255,255,255,0.4)")}>
+                <Icon.MarkRead size={12} />
+              </button>
+            )}
+            <button onClick={onDelete} title="Delete" style={iconBtn("rgba(248,113,113,0.7)")}>
+              <Icon.Delete size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Subject */}
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: msg.seen ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {msg.subject || "(no subject)"}
+      </div>
     </div>
   );
 }
 
+function iconBtn(color) {
+  return {
+    display: "flex", alignItems: "center", justifyContent: "center",
+    width: 24, height: 24, borderRadius: 6, border: "none",
+    background: "rgba(255,255,255,0.07)", cursor: "pointer",
+    color, transition: "background 0.15s",
+  };
+}
+
 // ─── Message viewer ───────────────────────────────────────────────────────────
-function MessageViewer({ msg, onClose }) {
+function MessageViewer({ msg, onClose, onDelete, onStar, starred }) {
   const iframeRef = useRef(null);
 
   useEffect(() => {
@@ -670,72 +688,56 @@ function MessageViewer({ msg, onClose }) {
       doc.open();
       doc.write(`<base target="_blank"><style>body{margin:0;padding:16px;font-family:sans-serif;font-size:14px;line-height:1.6;background:#fff;color:#111;}img{max-width:100%;}</style>${html}`);
       doc.close();
-      setTimeout(() => {
-        try { iframeRef.current.style.height = doc.body.scrollHeight + 32 + "px"; } catch {}
-      }, 300);
+      setTimeout(() => { try { iframeRef.current.style.height = doc.body.scrollHeight + 32 + "px"; } catch {} }, 300);
     }
   }, [msg]);
 
   if (!msg) return null;
   const html = msg.html ? (Array.isArray(msg.html) ? msg.html.join("") : msg.html) : null;
 
+  const downloadText = () => {
+    const blob = new Blob([msg.text || msg.subject || ""], { type: "text/plain" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `email-${msg.id}.txt`; a.click();
+  };
+
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 500,
-      background: "rgba(6,6,16,0.88)", backdropFilter: "blur(8px)",
-      display: "flex", flexDirection: "column",
-      animation: "msgOverlayIn 0.28s cubic-bezier(0.32,0.72,0,1)",
-    }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(6,6,16,0.88)", backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", animation: "msgOverlayIn 0.28s cubic-bezier(0.32,0.72,0,1)" }}>
       <style>{`
-        @keyframes msgOverlayIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes msgPanelIn {
-          from { opacity: 0; transform: translateY(40px) scale(0.98); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
+        @keyframes msgOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes msgPanelIn { from { opacity: 0; transform: translateY(40px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
       `}</style>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 14,
-        padding: "16px 24px",
-        background: "rgba(10,10,24,0.85)", backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        animation: "msgPanelIn 0.35s cubic-bezier(0.32,0.72,0,1)",
-      }}>
-        <button onClick={onClose} style={btnStyle("ghost")}>
-          <Icon.Back size={14} /> Back
-        </button>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", background: "rgba(10,10,24,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.07)", animation: "msgPanelIn 0.35s cubic-bezier(0.32,0.72,0,1)", flexWrap: "wrap", rowGap: 8 }}>
+        <button onClick={onClose} style={btnStyle("ghost")}><Icon.Back size={14} /> Back</button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {msg.subject || "(no subject)"}
-          </div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
-            From: {msg.from?.address || "Unknown"}
-          </div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.subject || "(no subject)"}</div>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>From: {msg.from?.address || "Unknown"}</div>
         </div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>
-          {new Date(msg.createdAt).toLocaleString()}
+        {/* Mail tools */}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{new Date(msg.createdAt).toLocaleString()}</span>
+          <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={{ ...btnStyle("ghost"), color: starred ? "#fbbf24" : undefined, padding: "7px 10px" }}>
+            {starred ? <Icon.StarFilled size={13} /> : <Icon.Star size={13} />}
+          </button>
+          <button onClick={downloadText} title="Download as .txt" style={{ ...btnStyle("ghost"), padding: "7px 10px" }}>
+            <Icon.Download size={13} />
+          </button>
+          <button onClick={() => onDelete(msg.id)} title="Delete" style={{ ...btnStyle("ghost"), color: "#f87171", padding: "7px 10px" }}>
+            <Icon.Delete size={13} />
+          </button>
         </div>
       </div>
+
+      {/* Body */}
       <div style={{ flex: 1, overflow: "auto", padding: "24px", animation: "msgPanelIn 0.4s 0.05s cubic-bezier(0.32,0.72,0,1) both" }}>
-        <div style={{
-          maxWidth: 720, margin: "0 auto",
-          background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 16, overflow: "hidden",
-        }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
           {html ? (
-            <iframe
-              ref={iframeRef}
-              sandbox="allow-same-origin"
-              style={{ width: "100%", border: "none", minHeight: 300, display: "block", background: "#fff" }}
-            />
+            <iframe ref={iframeRef} sandbox="allow-same-origin" style={{ width: "100%", border: "none", minHeight: 300, display: "block", background: "#fff" }} />
           ) : (
-            <pre style={{
-              whiteSpace: "pre-wrap", wordBreak: "break-word",
-              fontFamily: "var(--font-mono)", fontSize: 13, lineHeight: 1.8,
-              color: "rgba(255,255,255,0.75)", padding: 24, margin: 0,
-            }}>{msg.text || "(empty message)"}</pre>
+            <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)", fontSize: 13, lineHeight: 1.8, color: "rgba(255,255,255,0.75)", padding: 24, margin: 0 }}>
+              {msg.text || "(empty message)"}
+            </pre>
           )}
         </div>
       </div>
@@ -743,17 +745,18 @@ function MessageViewer({ msg, onClose }) {
   );
 }
 
-// ─── Guide view — memoized so tab switches don't re-render/re-animate ─────────
+// ─── Guide view ───────────────────────────────────────────────────────────────
 const GuideView = memo(function GuideView() {
   const steps = [
     { icon: <Icon.Shield size={20} />, title: "Auto-generated address", body: "A random temporary email is created the moment you open the app. No sign-up, no personal data required." },
-    { icon: <Icon.Edit size={20} />, title: "Or pick your own username", body: "Hit Custom to enter your preferred username and choose from available domains. Great for memorable addresses." },
+    { icon: <Icon.Edit size={20} />, title: "Or pick your own username", body: "Hit Custom to enter your preferred username and choose from available domains." },
     { icon: <Icon.Copy size={20} />, title: "Copy & use it anywhere", body: "Hit Copy and paste it into any site asking for your email — sign-ups, verifications, free trials." },
-    { icon: <Icon.Inbox size={20} />, title: "Emails arrive automatically", body: "Your inbox auto-refreshes every 15 seconds. New emails appear with an unread indicator — click any to open." },
+    { icon: <Icon.Inbox size={20} />, title: "Emails arrive automatically", body: "Your inbox auto-refreshes every 15 seconds. New emails show an unread indicator — click any to open." },
+    { icon: <Icon.Star size={20} />, title: "Star & manage emails", body: "Hover a message to star it, mark it read, or delete it. Inside a message you can also download the content." },
+    { icon: <Icon.Search size={20} />, title: "Search your inbox", body: "Use the search bar to filter messages by sender or subject instantly." },
     { icon: <Icon.New size={20} />, title: "Need a fresh address?", body: "Hit New Address for a brand-new random one. Once per minute to prevent abuse." },
     { icon: <Icon.Settings size={20} />, title: "Your session is saved", body: "Your address and token are stored in a cookie for 30 days so you don't lose access on page refresh." },
   ];
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: "#e2e8f0", marginBottom: 4 }}>How to use BurnerMail</div>
@@ -796,34 +799,15 @@ function SettingsView({ address, onClearCookies, onNew, newCooldown, lightMode, 
     <div style={{ display: "flex", flexDirection: "column", gap: 12, animation: "fadeUp 0.4s ease" }}>
       <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: lightMode ? "#1a1a2e" : "#e2e8f0", marginBottom: 4 }}>Settings</div>
 
-      {/* Appearance toggle */}
       <Glass style={{ padding: "20px 22px", ...glassLight }}>
         <div style={lbl}>Appearance</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: lightMode ? "#1a1a2e" : "#e2e8f0", marginBottom: 3 }}>
-              {lightMode ? "Light mode" : "Dark mode"}
-            </div>
-            <div style={bodyTxt}>Switch the app between light and dark themes.</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: lightMode ? "#1a1a2e" : "#e2e8f0", marginBottom: 3 }}>{lightMode ? "Light mode" : "Dark mode"}</div>
+            <div style={bodyTxt}>Switch between light and dark themes.</div>
           </div>
-          <div
-            onClick={onToggleLight}
-            style={{
-              width: 50, height: 27, borderRadius: 999, cursor: "pointer", flexShrink: 0, marginLeft: 20,
-              background: lightMode ? "linear-gradient(135deg,#818cf8,#a78bfa)" : "rgba(255,255,255,0.1)",
-              border: lightMode ? "none" : "1px solid rgba(255,255,255,0.14)",
-              position: "relative", transition: "all 0.25s ease",
-              boxShadow: lightMode ? "0 2px 10px rgba(99,102,241,0.4)" : "none",
-            }}
-          >
-            <div style={{
-              position: "absolute", top: 3, left: lightMode ? 23 : 3,
-              width: 21, height: 21, borderRadius: "50%", background: "#fff",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-              transition: "left 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: lightMode ? "#818cf8" : "#64748b",
-            }}>
+          <div onClick={onToggleLight} style={{ width: 50, height: 27, borderRadius: 999, cursor: "pointer", flexShrink: 0, marginLeft: 20, background: lightMode ? "linear-gradient(135deg,#818cf8,#a78bfa)" : "rgba(255,255,255,0.1)", border: lightMode ? "none" : "1px solid rgba(255,255,255,0.14)", position: "relative", transition: "all 0.25s ease", boxShadow: lightMode ? "0 2px 10px rgba(99,102,241,0.4)" : "none" }}>
+            <div style={{ position: "absolute", top: 3, left: lightMode ? 23 : 3, width: 21, height: 21, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.25s cubic-bezier(0.34,1.56,0.64,1)", display: "flex", alignItems: "center", justifyContent: "center", color: lightMode ? "#818cf8" : "#64748b" }}>
               {lightMode ? <SunIcon /> : <MoonIcon />}
             </div>
           </div>
@@ -840,9 +824,7 @@ function SettingsView({ address, onClearCookies, onNew, newCooldown, lightMode, 
 
       <Glass style={{ padding: "20px 22px", ...glassLight }}>
         <div style={lbl}>Storage</div>
-        <div style={{ ...bodyTxt, marginBottom: 14 }}>
-          Your address and session token are saved in a cookie for 30 days so you don't lose access on refresh.
-        </div>
+        <div style={{ ...bodyTxt, marginBottom: 14 }}>Your address and session token are saved in a cookie for 30 days so you don't lose access on refresh.</div>
         <button onClick={onClearCookies} style={{ ...btnStyle("ghost"), borderColor: "rgba(248,113,113,0.3)", color: "#f87171" }}>
           <Icon.Delete size={13} /> Clear all data
         </button>
@@ -863,37 +845,14 @@ function SettingsView({ address, onClearCookies, onNew, newCooldown, lightMode, 
 
 // ─── Shared button style ──────────────────────────────────────────────────────
 function btnStyle(variant = "ghost") {
-  const base = {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "8px 14px", borderRadius: 10, cursor: "pointer",
-    fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
-    transition: "all 0.18s", whiteSpace: "nowrap",
-  };
-  if (variant === "primary") return {
-    ...base,
-    background: "linear-gradient(135deg,rgba(99,102,241,0.8),rgba(139,92,246,0.7))",
-    border: "1px solid rgba(99,102,241,0.4)",
-    color: "#fff",
-    boxShadow: "0 2px 12px rgba(99,102,241,0.25)",
-  };
-  return {
-    ...base,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    color: "rgba(255,255,255,0.7)",
-  };
+  const base = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500, transition: "all 0.18s", whiteSpace: "nowrap" };
+  if (variant === "primary") return { ...base, background: "linear-gradient(135deg,rgba(99,102,241,0.8),rgba(139,92,246,0.7))", border: "1px solid rgba(99,102,241,0.4)", color: "#fff", boxShadow: "0 2px 12px rgba(99,102,241,0.25)" };
+  return { ...base, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.7)" };
 }
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
 function Spinner() {
-  return (
-    <span style={{
-      display: "inline-block", width: 13, height: 13,
-      border: "2px solid rgba(255,255,255,0.15)",
-      borderTopColor: "#818cf8", borderRadius: "50%",
-      animation: "spin 0.65s linear infinite", flexShrink: 0,
-    }} />
-  );
+  return <span style={{ display: "inline-block", width: 13, height: 13, border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "#818cf8", borderRadius: "50%", animation: "spin 0.65s linear infinite", flexShrink: 0 }} />;
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
@@ -911,6 +870,9 @@ export default function App() {
   const [refreshCooldown, setRefreshCooldown] = useState(0);
   const [availableDomains, setAvailableDomains] = useState([]);
   const [lightMode, setLightMode] = useState(false);
+  const [starredIds, setStarredIds] = useState(() => new Set(JSON.parse(localStorage.getItem("bm_stars") || "[]")));
+  const [search, setSearch] = useState("");
+  const [deletedIds, setDeletedIds] = useState(() => new Set(JSON.parse(localStorage.getItem("bm_deleted") || "[]")));
   const pollRef = useRef(null);
   const cdRef = useRef(null);
 
@@ -920,7 +882,6 @@ export default function App() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
   }, []);
 
-  // Cooldown ticker
   useEffect(() => {
     cdRef.current = setInterval(() => {
       setNewCooldown(RateLimit.check("rl_new", NEW_ADDR_LIMIT));
@@ -954,60 +915,37 @@ export default function App() {
   const createAddress = useCallback(async (silent = false) => {
     const wait = RateLimit.check("rl_new", NEW_ADDR_LIMIT);
     if (wait > 0) { showToast(`Wait ${Math.ceil(wait / 1000)}s before generating a new address`, "error"); return; }
-
     if (pollRef.current) clearInterval(pollRef.current);
-    setLoadingAddr(true);
-    setMessages([]);
-    setAddress(null);
-    setToken(null);
-    Cookies.del("bm");
-
+    setLoadingAddr(true); setMessages([]); setAddress(null); setToken(null); Cookies.del("bm");
     try {
       const doms = await fetchDomains();
       if (!doms?.length) throw new Error("No domains available");
       const domain = doms[Math.floor(Math.random() * doms.length)].domain;
       const addr = rand(10) + "@" + domain;
       const pass = rand(18);
-
       await apiFetch("/accounts", { method: "POST", body: JSON.stringify({ address: addr, password: pass }) });
       const { token: tok } = await apiFetch("/token", { method: "POST", body: JSON.stringify({ address: addr, password: pass }) });
-
       Cookies.set("bm", { address: addr, password: pass, token: tok });
       RateLimit.mark("rl_new");
-      setAddress(addr);
-      setToken(tok);
-      setLoadingAddr(false);
+      setAddress(addr); setToken(tok); setLoadingAddr(false);
       if (!silent) showToast("New address created", "success");
       await fetchMessages(tok);
       startPolling(tok);
-    } catch (e) {
-      setLoadingAddr(false);
-      showToast("Failed: " + e.message, "error");
-    }
+    } catch (e) { setLoadingAddr(false); showToast("Failed: " + e.message, "error"); }
   }, [fetchDomains, fetchMessages, startPolling, showToast]);
 
-  // ─── Custom address creation ───────────────────────────────────────────────
   const createCustomAddress = useCallback(async (customAddr) => {
     const wait = RateLimit.check("rl_new", NEW_ADDR_LIMIT);
     if (wait > 0) { showToast(`Wait ${Math.ceil(wait / 1000)}s`, "error"); return; }
-
     if (pollRef.current) clearInterval(pollRef.current);
-    setLoadingAddr(true);
-    setMessages([]);
-    setAddress(null);
-    setToken(null);
-    Cookies.del("bm");
-
+    setLoadingAddr(true); setMessages([]); setAddress(null); setToken(null); Cookies.del("bm");
     try {
       const pass = rand(18);
       await apiFetch("/accounts", { method: "POST", body: JSON.stringify({ address: customAddr, password: pass }) });
       const { token: tok } = await apiFetch("/token", { method: "POST", body: JSON.stringify({ address: customAddr, password: pass }) });
-
       Cookies.set("bm", { address: customAddr, password: pass, token: tok });
       RateLimit.mark("rl_new");
-      setAddress(customAddr);
-      setToken(tok);
-      setLoadingAddr(false);
+      setAddress(customAddr); setToken(tok); setLoadingAddr(false);
       showToast("Custom address created!", "success");
       await fetchMessages(tok);
       startPolling(tok);
@@ -1015,9 +953,7 @@ export default function App() {
       setLoadingAddr(false);
       if (e.message.includes("already") || e.message.includes("exist") || e.message.includes("422")) {
         showToast("That address is already taken — try another.", "error");
-      } else {
-        showToast("Failed: " + e.message, "error");
-      }
+      } else { showToast("Failed: " + e.message, "error"); }
     }
   }, [fetchMessages, startPolling, showToast]);
 
@@ -1037,17 +973,42 @@ export default function App() {
       apiFetch("/messages/" + id, { method: "PATCH", headers: { "Content-Type": "application/merge-patch+json" }, body: JSON.stringify({ seen: true }) }, token).catch(() => {});
       setMessages(ms => ms.map(m => m.id === id ? { ...m, seen: true } : m));
       setOpenMsg(msg);
-    } catch {
-      showToast("Could not load message", "error");
-    }
+    } catch { showToast("Could not load message", "error"); }
   }, [token, showToast]);
 
+  const handleDelete = useCallback((id) => {
+    apiFetch("/messages/" + id, { method: "DELETE" }, token).catch(() => {});
+    setMessages(ms => ms.filter(m => m.id !== id));
+    setDeletedIds(prev => {
+      const next = new Set(prev); next.add(id);
+      localStorage.setItem("bm_deleted", JSON.stringify([...next]));
+      return next;
+    });
+    if (openMsg?.id === id) setOpenMsg(null);
+    showToast("Message deleted", "");
+  }, [token, openMsg, showToast]);
+
+  const handleStar = useCallback((id) => {
+    setStarredIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); showToast("Unstarred", ""); }
+      else { next.add(id); showToast("Starred", "success"); }
+      localStorage.setItem("bm_stars", JSON.stringify([...next]));
+      return next;
+    });
+  }, [showToast]);
+
+  const handleMarkRead = useCallback((id) => {
+    apiFetch("/messages/" + id, { method: "PATCH", headers: { "Content-Type": "application/merge-patch+json" }, body: JSON.stringify({ seen: true }) }, token).catch(() => {});
+    setMessages(ms => ms.map(m => m.id === id ? { ...m, seen: true } : m));
+  }, [token]);
+
   const handleClearCookies = useCallback(() => {
-    Cookies.del("bm");
-    localStorage.removeItem("rl_new");
-    localStorage.removeItem("rl_refresh");
+    Cookies.del("bm"); localStorage.removeItem("rl_new"); localStorage.removeItem("rl_refresh");
+    localStorage.removeItem("bm_stars"); localStorage.removeItem("bm_deleted");
     if (pollRef.current) clearInterval(pollRef.current);
     setAddress(null); setToken(null); setMessages([]);
+    setStarredIds(new Set()); setDeletedIds(new Set());
     showToast("All data cleared", "success");
   }, [showToast]);
 
@@ -1064,20 +1025,15 @@ export default function App() {
     if (saved?.address && saved?.token) {
       try {
         const data = await apiFetch("/messages?page=1", {}, saved.token);
-        setAddress(saved.address);
-        setToken(saved.token);
+        setAddress(saved.address); setToken(saved.token);
         setMessages(data["hydra:member"] || []);
-        startPolling(saved.token);
-        return;
+        startPolling(saved.token); return;
       } catch {}
     }
     await createAddress(true);
   }, [createAddress, startPolling, fetchDomains]);
 
-  const handleLoadingDone = useCallback(() => {
-    setReady(true);
-    boot();
-  }, [boot]);
+  const handleLoadingDone = useCallback(() => { setReady(true); boot(); }, [boot]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
   useEffect(() => {
@@ -1086,16 +1042,15 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const unread = messages.filter(m => !m.seen).length;
+  // Filter out deleted messages
+  const visibleMessages = messages.filter(m => !deletedIds.has(m.id));
+  const unread = visibleMessages.filter(m => !m.seen).length;
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap');
-        :root {
-          --font-display: 'Outfit', sans-serif;
-          --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
-        }
+        :root { --font-display: 'Outfit', sans-serif; --font-mono: 'JetBrains Mono', 'Fira Mono', monospace; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; }
         body { font-family: var(--font-mono); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
@@ -1108,6 +1063,17 @@ export default function App() {
         button:focus-visible { outline: 2px solid rgba(99,102,241,0.6); outline-offset: 2px; }
         input:focus { border-color: rgba(99,102,241,0.5) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
         select option { background: #0f0f1e; }
+
+        /* Mobile: hide logo text, keep only icon */
+        @media (max-width: 500px) {
+          .logo-text { display: none; }
+          .logo-img { display: flex !important; }
+          .nav-label { display: none; }
+        }
+        /* Tablet: show short label */
+        @media (min-width: 501px) {
+          .nav-label { display: inline; }
+        }
       `}</style>
 
       {!ready && <LoadingScreen onDone={handleLoadingDone} />}
@@ -1117,45 +1083,56 @@ export default function App() {
           <SpotlightBg lightMode={lightMode} />
 
           <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-            {/* Top bar — logo left, nav CENTER, status right */}
+
+            {/* ── Header — transparent bg to match page ── */}
             <header style={{
               display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
+              gridTemplateColumns: "auto 1fr auto",
               alignItems: "center",
-              padding: "14px 24px",
+              gap: 12,
+              padding: "12px 20px",
               borderBottom: lightMode ? "1px solid rgba(0,0,0,0.07)" : "1px solid rgba(255,255,255,0.06)",
-              background: lightMode ? "rgba(255,255,255,0.7)" : "rgba(6,6,16,0.65)", backdropFilter: "blur(24px)",
+              /* Transparent so SpotlightBg shows through — only a subtle blur overlay */
+              background: lightMode ? "rgba(240,240,255,0.55)" : "rgba(6,6,16,0.45)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
               position: "sticky", top: 0, zIndex: 100,
               animation: "fadeUp 0.4s ease",
               transition: "background 0.3s ease",
             }}>
-              {/* Logo — left */}
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", display: "flex", alignItems: "center", gap: 8 }}>
-                <img src="/mail.png" alt="" width={22} height={22} style={{ borderRadius: 5 }} onError={e => e.target.style.display = "none"} />
-                <span>
-                  <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Burner</span><span style={{ color: "rgba(255,255,255,0.38)", fontWeight: 400 }}>Mail</span>
+
+              {/* Logo */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <img
+                  src="/mail.png" alt="BurnerMail" width={26} height={26}
+                  style={{ borderRadius: 6, display: "block" }}
+                  onError={e => e.target.style.display = "none"}
+                />
+                <span className="logo-text" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", whiteSpace: "nowrap" }}>
+                  <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Burner</span>
+                  <span style={{ color: "rgba(255,255,255,0.38)", fontWeight: 400 }}>Mail</span>
                 </span>
               </div>
 
               {/* Nav — centered */}
-              <PillNav tab={tab} setTab={setTab} unread={unread} />
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <PillNav tab={tab} setTab={setTab} unread={unread} />
+              </div>
 
-              {/* Status dot — right */}
-              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: 1 }}>
-                  {address && !loadingAddr ? "LIVE" : ""}
-                </span>
+              {/* Status dot */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flexShrink: 0 }}>
                 <div style={{
-                  width: 9, height: 9, borderRadius: "50%", flexShrink: 0,
+                  width: 9, height: 9, borderRadius: "50%",
                   background: address && !loadingAddr ? "#4ade80" : "rgba(255,255,255,0.15)",
                   boxShadow: address && !loadingAddr ? "0 0 0 3px rgba(74,222,128,0.2)" : "none",
                   animation: address && !loadingAddr ? "livePulse 2s infinite" : "none",
+                  flexShrink: 0,
                 }} />
               </div>
             </header>
 
-            {/* Content */}
-            <main style={{ flex: 1, maxWidth: 760, width: "100%", margin: "0 auto", padding: "28px 20px 40px" }}>
+            {/* ── Main content ── */}
+            <main style={{ flex: 1, maxWidth: 760, width: "100%", margin: "0 auto", padding: "28px 16px 40px" }}>
               {tab === "inbox" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   <AddressCard
@@ -1171,12 +1148,8 @@ export default function App() {
                   />
 
                   <Glass style={{ overflow: "hidden", animation: "fadeUp 0.5s 80ms both ease" }}>
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "16px 24px",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
-                      background: "rgba(255,255,255,0.02)",
-                    }}>
+                    {/* Inbox header */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
                       <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
                         <Icon.Inbox size={14} />
                         Inbox
@@ -1186,11 +1159,24 @@ export default function App() {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: 1 }}>
-                        AUTO-REFRESH · 15s
-                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: 1 }}>AUTO · 15s</div>
                     </div>
-                    <InboxView messages={messages} onOpen={handleOpen} loading={loadingMsgs} />
+
+                    {/* Search bar */}
+                    <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <SearchBar value={search} onChange={setSearch} />
+                    </div>
+
+                    <InboxView
+                      messages={visibleMessages}
+                      onOpen={handleOpen}
+                      onDelete={handleDelete}
+                      onStar={handleStar}
+                      onMarkRead={handleMarkRead}
+                      loading={loadingMsgs}
+                      starredIds={starredIds}
+                      search={search}
+                    />
                   </Glass>
                 </div>
               )}
@@ -1209,7 +1195,15 @@ export default function App() {
             </main>
           </div>
 
-          {openMsg && <MessageViewer msg={openMsg} onClose={() => setOpenMsg(null)} />}
+          {openMsg && (
+            <MessageViewer
+              msg={openMsg}
+              onClose={() => setOpenMsg(null)}
+              onDelete={handleDelete}
+              onStar={() => handleStar(openMsg.id)}
+              starred={starredIds.has(openMsg.id)}
+            />
+          )}
         </div>
       )}
 
