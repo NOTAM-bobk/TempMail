@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 
+// ─── Worker URL ───────────────────────────────────────────────────────────────
+// Set VITE_AUTH_WORKER_URL in your .env file:
+//   VITE_AUTH_WORKER_URL=https://burnermail-auth.<your-subdomain>.workers.dev
+const WORKER = import.meta.env.VITE_AUTH_WORKER_URL || "";
+
 // ─── Cookie helpers ───────────────────────────────────────────────────────────
 const Cookies = {
   set(name, value, days = 30) {
@@ -28,7 +33,7 @@ const RateLimit = {
 const NEW_ADDR_LIMIT = 60_000;
 const REFRESH_LIMIT  = 10_000;
 
-// ─── API ──────────────────────────────────────────────────────────────────────
+// ─── Mail.tm API ──────────────────────────────────────────────────────────────
 const API = "https://api.mail.tm";
 
 async function apiFetch(path, opts = {}, token = null) {
@@ -36,12 +41,24 @@ async function apiFetch(path, opts = {}, token = null) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(API + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err["hydra:description"] || err.message || `HTTP ${res.status}`);
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e["hydra:description"] || e.message || `HTTP ${res.status}`);
   }
   return res.json();
 }
 
+// ─── Cloudflare Worker API ────────────────────────────────────────────────────
+const workerFetch = async (path, opts = {}, token = null) => {
+  if (!WORKER) throw new Error("VITE_AUTH_WORKER_URL not set");
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(WORKER + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function rand(n = 10) {
   return Array.from({ length: n }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("");
 }
@@ -158,24 +175,11 @@ const Icon = {
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   ),
-  ExternalLink: ({ size = 14 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
-    </svg>
-  ),
   Search: ({ size = 14 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   ),
-  QR: ({ size = 14 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="5" height="5" /><rect x="16" y="3" width="5" height="5" /><rect x="3" y="16" width="5" height="5" />
-      <line x1="21" y1="16" x2="21" y2="21" /><line x1="16" y1="21" x2="21" y2="21" /><line x1="16" y1="16" x2="16" y2="16" />
-      <line x1="12" y1="3" x2="12" y2="6" /><line x1="12" y1="9" x2="12" y2="12" /><line x1="3" y1="12" x2="6" y2="12" /><line x1="9" y1="12" x2="12" y2="12" />
-    </svg>
-  ),
-  // Hamburger icon for accounts drawer
   Hamburger: ({ size = 16 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
@@ -191,24 +195,37 @@ const Icon = {
       <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>
     </svg>
   ),
+  User: ({ size = 15 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  LogOut: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  ),
+  Cloud: ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
+    </svg>
+  ),
 };
 
-// ─── Animated spotlight background ────────────────────────────────────────────
-function SpotlightBg({ lightMode }) {
+// ─── Animated spotlight background ───────────────────────────────────────────
+function SpotlightBg({ theme }) {
   const ref = useRef(null);
   const colorRef = useRef({ t: 0 });
+  const lightMode = theme === "light";
+  const brutalist = theme === "brutalist";
 
   useEffect(() => {
+    if (brutalist) return; // brutalist has its own static bg
     const el = ref.current;
     let mx = 50, my = 40;
     let animFrame;
-
-    const move = (e) => {
-      mx = e.clientX / window.innerWidth * 100;
-      my = e.clientY / window.innerHeight * 100;
-    };
+    const move = (e) => { mx = e.clientX / window.innerWidth * 100; my = e.clientY / window.innerHeight * 100; };
     window.addEventListener("mousemove", move);
-
     const tick = () => {
       const c = colorRef.current;
       c.t += 0.003;
@@ -229,10 +246,15 @@ function SpotlightBg({ lightMode }) {
       el.style.setProperty("--orb3-color", `hsla(${hue3},70%,55%,${a3})`);
       animFrame = requestAnimationFrame(tick);
     };
-
     animFrame = requestAnimationFrame(tick);
     return () => { window.removeEventListener("mousemove", move); cancelAnimationFrame(animFrame); };
-  }, [lightMode]);
+  }, [lightMode, brutalist]);
+
+  if (brutalist) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "#f5f0e8", backgroundImage: "radial-gradient(circle at 20% 20%, #ffe4b5 0%, transparent 50%), radial-gradient(circle at 80% 80%, #ffd6e7 0%, transparent 50%)" }} />
+    );
+  }
 
   return (
     <div ref={ref} style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", "--mx": "50%", "--my": "40%", "--orb1-color": "rgba(99,102,241,0.13)", "--orb2-color": "rgba(139,92,246,0.10)", "--orb3-color": "rgba(59,130,246,0.09)" }}>
@@ -241,10 +263,8 @@ function SpotlightBg({ lightMode }) {
       <div style={{ position: "absolute", width: 800, height: 800, top: -200, left: -150, background: "radial-gradient(circle, var(--orb2-color) 0%, transparent 65%)", borderRadius: "50%", animation: "orb1 18s ease-in-out infinite alternate" }} />
       <div style={{ position: "absolute", width: 700, height: 700, bottom: -150, right: -100, background: "radial-gradient(circle, var(--orb3-color) 0%, transparent 65%)", borderRadius: "50%", animation: "orb2 22s ease-in-out infinite alternate" }} />
       <div style={{ position: "absolute", width: 500, height: 500, top: "40%", left: "60%", background: "radial-gradient(circle, rgba(244,114,182,0.06) 0%, transparent 65%)", borderRadius: "50%", animation: "orb3 14s ease-in-out infinite alternate" }} />
-      {/* nano-mail inspired: subtle scanlines */}
       <div className="scanlines" />
       <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
-      <div style={{ position: "absolute", inset: 0, opacity: 0.3, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E")` }} />
       <style>{`
         @keyframes orb1 { from { transform: translate(0,0) scale(1); } to { transform: translate(120px,80px) scale(1.2); } }
         @keyframes orb2 { from { transform: translate(0,0) scale(1); } to { transform: translate(-90px,-100px) scale(1.15); } }
@@ -256,11 +276,18 @@ function SpotlightBg({ lightMode }) {
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
-function Toast({ toasts }) {
+function Toast({ toasts, brutalist }) {
   return (
     <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
       {toasts.map(t => (
-        <div key={t.id} style={{
+        <div key={t.id} style={brutalist ? {
+          background: "#111", color: t.type === "error" ? "#ff3333" : t.type === "success" ? "#00aa44" : "#111",
+          padding: "10px 20px", border: "2.5px solid #111", borderRadius: 0,
+          fontFamily: "var(--font-mono)", fontSize: 13,
+          boxShadow: "4px 4px 0 #111",
+          animation: "toastIn 0.2s ease",
+          whiteSpace: "nowrap",
+        } : {
           background: "rgba(18,18,32,0.95)", backdropFilter: "blur(20px)",
           border: `1px solid ${t.type === "error" ? "rgba(248,113,113,0.4)" : t.type === "success" ? "rgba(74,222,128,0.4)" : "rgba(255,255,255,0.12)"}`,
           color: t.type === "error" ? "#f87171" : t.type === "success" ? "#4ade80" : "#e2e8f0",
@@ -277,16 +304,9 @@ function Toast({ toasts }) {
   );
 }
 
-// ─── Loading phrases ──────────────────────────────────────────────────────────
-const LOADING_PHRASES = [
-  "SETTING UP YOUR INBOX…",
-  "SPAWNING A FRESH ADDRESS…",
-  "WARMING UP THE SERVERS…",
-  "ALMOST THERE…",
-  "JUST A MOMENT…",
-];
-
 // ─── Loading screen ───────────────────────────────────────────────────────────
+const LOADING_PHRASES = ["SETTING UP YOUR INBOX…","SPAWNING A FRESH ADDRESS…","WARMING UP THE SERVERS…","ALMOST THERE…","JUST A MOMENT…"];
+
 function LoadingScreen({ onDone }) {
   const TOTAL = 5;
   const [count, setCount] = useState(TOTAL);
@@ -294,16 +314,13 @@ function LoadingScreen({ onDone }) {
   const [phraseIdx, setPhraseIdx] = useState(0);
 
   useEffect(() => {
-    const phraseInterval = setInterval(() => setPhraseIdx(i => (i + 1) % LOADING_PHRASES.length), 1800);
-    return () => clearInterval(phraseInterval);
+    const pi = setInterval(() => setPhraseIdx(i => (i + 1) % LOADING_PHRASES.length), 1800);
+    return () => clearInterval(pi);
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCount(c => {
-        if (c <= 1) { clearInterval(interval); setPhase("ready"); return 0; }
-        return c - 1;
-      });
+      setCount(c => { if (c <= 1) { clearInterval(interval); setPhase("ready"); return 0; } return c - 1; });
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -313,7 +330,6 @@ function LoadingScreen({ onDone }) {
   }, [phase, onDone]);
 
   const pct = ((TOTAL - count) / TOTAL) * 283;
-
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0d0d1a 0%, #060610 100%)", transition: "opacity 0.6s ease", opacity: phase === "ready" ? 0 : 1 }}>
       <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
@@ -323,14 +339,8 @@ function LoadingScreen({ onDone }) {
       <div style={{ position: "relative", marginBottom: 32, zIndex: 1 }}>
         <svg width={100} height={100} viewBox="0 0 96 96" style={{ transform: "rotate(-90deg)", filter: "drop-shadow(0 0 20px rgba(129,140,248,0.3))" }}>
           <circle cx="48" cy="48" r="45" fill="none" stroke="rgba(99,102,241,0.12)" strokeWidth="4" />
-          <circle cx="48" cy="48" r="45" fill="none" stroke="url(#lg)" strokeWidth="4"
-            strokeDasharray="283" strokeDashoffset={283 - pct}
-            strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)" }} />
-          <defs>
-            <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#f472b6" />
-            </linearGradient>
-          </defs>
+          <circle cx="48" cy="48" r="45" fill="none" stroke="url(#lg)" strokeWidth="4" strokeDasharray="283" strokeDashoffset={283 - pct} strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)" }} />
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#f472b6" /></linearGradient></defs>
         </svg>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ color: "#e2e8f0", fontSize: 24, fontFamily: "var(--font-display)", fontWeight: 800, lineHeight: 1 }}>
@@ -338,14 +348,11 @@ function LoadingScreen({ onDone }) {
           </div>
         </div>
       </div>
-      {/* nano-mail inspired tagline under loader */}
       <div style={{ fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 900, letterSpacing: "-0.8px", marginBottom: 8, zIndex: 1 }}>
         <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Burner</span>
         <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 400 }}>Mail</span>
       </div>
-      <p style={{ color: "rgba(255,255,255,0.18)", fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "3px", zIndex: 1, marginBottom: 6 }}>
-        FAST · PRIVATE · DISPOSABLE
-      </p>
+      <p style={{ color: "rgba(255,255,255,0.18)", fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: "3px", zIndex: 1, marginBottom: 6 }}>FAST · PRIVATE · DISPOSABLE</p>
       <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "var(--font-mono)", marginTop: 4, letterSpacing: "2px", zIndex: 1, animation: "phraseFade 1.8s infinite" }}>
         {phase === "ready" ? "✓ READY" : LOADING_PHRASES[phraseIdx]}
       </p>
@@ -358,38 +365,194 @@ function LoadingScreen({ onDone }) {
   );
 }
 
+// ─── Auth Modal ───────────────────────────────────────────────────────────────
+function AuthModal({ onClose, onSuccess, brutalist }) {
+  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    setError("");
+    if (!username.trim() || !password.trim()) { setError("Please fill in both fields."); return; }
+    if (!WORKER) { setError("Auth worker URL not configured. Add VITE_AUTH_WORKER_URL to your .env"); return; }
+    setLoading(true);
+    try {
+      const data = await workerFetch(`/auth/${mode}`, { method: "POST", body: JSON.stringify({ username: username.trim().toLowerCase(), password }) });
+      onSuccess(data.token, data.username);
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  if (brutalist) {
+    return (
+      <>
+        <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 800, background: "rgba(0,0,0,0.5)" }} />
+        <div style={{
+          position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          zIndex: 801, background: "#f5f0e8", border: "3px solid #111",
+          boxShadow: "8px 8px 0 #111", padding: "32px 36px", minWidth: 340, maxWidth: "90vw",
+          animation: "fadeUp 0.2s ease",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 22, color: "#111", letterSpacing: "-0.5px" }}>
+              {mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
+            </div>
+            <button onClick={onClose} style={{ ...brutalistIconBtn(), width: 32, height: 32 }}><Icon.Close size={14} /></button>
+          </div>
+          <BrutalistField label="USERNAME" value={username} onChange={setUsername} placeholder="your_username" onEnter={handleSubmit} />
+          <BrutalistField label="PASSWORD" value={password} onChange={setPassword} placeholder="••••••••" type="password" onEnter={handleSubmit} />
+          {error && <div style={{ background: "#ffeeee", border: "2px solid #ff3333", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: 12, color: "#cc0000", marginBottom: 16 }}>{error}</div>}
+          <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#111", color: "#f5f0e8", border: "2.5px solid #111", padding: "12px", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, letterSpacing: "1px", cursor: loading ? "not-allowed" : "pointer", boxShadow: loading ? "none" : "4px 4px 0 #555", transition: "all 0.1s", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            {loading ? <Spinner /> : (mode === "login" ? "SIGN IN" : "CREATE ACCOUNT")}
+          </button>
+          <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 12, color: "#555" }}>
+            {mode === "login" ? "No account? " : "Have an account? "}
+            <span onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }} style={{ cursor: "pointer", fontWeight: 700, color: "#111", textDecoration: "underline" }}>
+              {mode === "login" ? "Register" : "Sign in"}
+            </span>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 800, background: "rgba(6,6,16,0.8)", backdropFilter: "blur(8px)" }} />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+        zIndex: 801, background: "rgba(12,12,28,0.97)", backdropFilter: "blur(30px)",
+        border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20,
+        boxShadow: "0 24px 80px rgba(0,0,0,0.6)", padding: "32px 36px",
+        minWidth: 340, maxWidth: "90vw", animation: "fadeUp 0.3s cubic-bezier(0.32,0.72,0,1)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, color: "#e2e8f0" }}>
+              {mode === "login" ? "Welcome back" : "Create account"}
+            </div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
+              {mode === "login" ? "Sign in to sync your inboxes" : "Save inboxes across devices"}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ ...iconBtnBase("rgba(255,255,255,0.5)"), borderRadius: 8 }}><Icon.Close size={15} /></button>
+        </div>
+
+        <GlassField label="Username" value={username} onChange={setUsername} placeholder="yourname" onEnter={handleSubmit} />
+        <GlassField label="Password" value={password} onChange={setPassword} placeholder="••••••••" type="password" onEnter={handleSubmit} />
+
+        {error && (
+          <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 10, padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: 12, color: "#f87171", marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        <button onClick={handleSubmit} disabled={loading} style={{
+          width: "100%", background: "linear-gradient(135deg,rgba(99,102,241,0.9),rgba(139,92,246,0.8))",
+          border: "1px solid rgba(99,102,241,0.5)", borderRadius: 12, padding: "12px",
+          fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, color: "#fff",
+          cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
+          boxShadow: "0 4px 20px rgba(99,102,241,0.3)", marginBottom: 14,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          transition: "all 0.18s",
+        }}>
+          {loading ? <Spinner /> : (mode === "login" ? "Sign in" : "Create account")}
+        </button>
+
+        <div style={{ textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
+          {mode === "login" ? "No account? " : "Have an account? "}
+          <span onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}
+            style={{ cursor: "pointer", color: "#818cf8", fontWeight: 500 }}>
+            {mode === "login" ? "Register" : "Sign in"}
+          </span>
+        </div>
+
+        <div style={{ marginTop: 20, padding: "12px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+            <Icon.Cloud size={12} />
+            Saved to Cloudflare — access your inboxes on any device
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function GlassField({ label, value, onChange, placeholder, type = "text", onEnter }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "1.5px", color: "rgba(255,255,255,0.4)", marginBottom: 6, textTransform: "uppercase" }}>{label}</div>
+      <input
+        type={type} value={value} placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && onEnter()}
+        style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "11px 14px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0", outline: "none", transition: "border 0.2s" }}
+      />
+    </div>
+  );
+}
+
+function BrutalistField({ label, value, onChange, placeholder, type = "text", onEnter }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "2px", color: "#111", marginBottom: 5, fontWeight: 700 }}>{label}</div>
+      <input
+        type={type} value={value} placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && onEnter()}
+        style={{ width: "100%", background: "#fff", border: "2.5px solid #111", borderRadius: 0, padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", outline: "none", boxShadow: "3px 3px 0 #111", transition: "box-shadow 0.1s" }}
+      />
+    </div>
+  );
+}
+
 // ─── Pill nav ─────────────────────────────────────────────────────────────────
-function PillNav({ tab, setTab, unread }) {
+function PillNav({ tab, setTab, unread, brutalist }) {
   const tabs = [
     { id: "inbox", label: "Inbox", icon: <Icon.Inbox size={17} /> },
     { id: "guide", label: "How to Use", icon: <Icon.Guide size={17} /> },
     { id: "settings", label: "Settings", icon: <Icon.Settings size={17} /> },
   ];
+
+  if (brutalist) {
+    return (
+      <div style={{ display: "inline-flex", gap: 0, border: "2.5px solid #111" }}>
+        {tabs.map((t, i) => (
+          <button key={t.id} onClick={() => setTab(t.id)} title={t.label} style={{
+            display: "flex", alignItems: "center", gap: 7, padding: "9px 16px",
+            border: "none", borderRight: i < tabs.length - 1 ? "2px solid #111" : "none",
+            cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700,
+            background: tab === t.id ? "#111" : "#f5f0e8",
+            color: tab === t.id ? "#f5f0e8" : "#111",
+            letterSpacing: "0.5px", transition: "all 0.1s", position: "relative",
+          }}>
+            {t.icon}
+            <span className="nav-label">{t.label}</span>
+            {t.id === "inbox" && unread > 0 && (
+              <span style={{ background: "#ff3333", color: "#fff", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 0, border: "1.5px solid #111", marginLeft: 2 }}>{unread}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div style={{
-      display: "inline-flex", alignItems: "center", gap: 3,
-      background: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.11)",
-      borderRadius: 999, padding: "5px",
-      backdropFilter: "blur(20px)",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
-    }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 999, padding: "5px", backdropFilter: "blur(20px)", boxShadow: "0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)" }}>
       {tabs.map(t => (
-        <button
-          key={t.id}
-          onClick={() => setTab(t.id)}
-          title={t.label}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-            padding: "10px 18px", borderRadius: 999, border: "none", cursor: "pointer",
-            transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
-            background: tab === t.id ? "linear-gradient(135deg,rgba(99,102,241,0.8),rgba(139,92,246,0.7))" : "transparent",
-            color: tab === t.id ? "#fff" : "rgba(255,255,255,0.45)",
-            boxShadow: tab === t.id ? "0 2px 14px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.15)" : "none",
-            position: "relative",
-            fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
-          }}
-        >
+        <button key={t.id} onClick={() => setTab(t.id)} title={t.label} style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+          padding: "10px 18px", borderRadius: 999, border: "none", cursor: "pointer",
+          transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+          background: tab === t.id ? "linear-gradient(135deg,rgba(99,102,241,0.8),rgba(139,92,246,0.7))" : "transparent",
+          color: tab === t.id ? "#fff" : "rgba(255,255,255,0.45)",
+          boxShadow: tab === t.id ? "0 2px 14px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.15)" : "none",
+          position: "relative", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
+        }}>
           {t.icon}
           <span className="nav-label">{t.label}</span>
           {t.id === "inbox" && unread > 0 && (
@@ -401,17 +564,21 @@ function PillNav({ tab, setTab, unread }) {
   );
 }
 
-// ─── Glass card ───────────────────────────────────────────────────────────────
-function Glass({ children, style = {}, ...props }) {
+// ─── Glass card (adapts to theme) ─────────────────────────────────────────────
+function Glass({ children, style = {}, brutalist = false, ...props }) {
+  if (brutalist) {
+    return (
+      <div style={{ background: "#fff", border: "2.5px solid #111", borderRadius: 0, boxShadow: "5px 5px 0 #111", ...style }} {...props}>
+        {children}
+      </div>
+    );
+  }
   return (
     <div style={{
-      background: "rgba(255,255,255,0.04)",
-      backdropFilter: "blur(24px) saturate(180%)",
+      background: "rgba(255,255,255,0.04)", backdropFilter: "blur(24px) saturate(180%)",
       WebkitBackdropFilter: "blur(24px) saturate(180%)",
-      border: "1px solid rgba(255,255,255,0.09)",
-      borderRadius: 20,
-      boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.07)",
-      ...style,
+      border: "1px solid rgba(255,255,255,0.09)", borderRadius: 20,
+      boxShadow: "0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.07)", ...style,
     }} {...props}>
       {children}
     </div>
@@ -419,115 +586,81 @@ function Glass({ children, style = {}, ...props }) {
 }
 
 // ─── Accounts Drawer ──────────────────────────────────────────────────────────
-function AccountsDrawer({ open, onClose, accounts, activeAddress, onSwitch, onDeleteAccount, onAddNew, newCooldown, loadingAddr }) {
+function AccountsDrawer({ open, onClose, accounts, activeAddress, onSwitch, onDeleteAccount, onAddNew, newCooldown, loadingAddr, brutalist }) {
   if (!open) return null;
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(6,6,16,0.6)", backdropFilter: "blur(4px)", animation: "fadeIn 0.2s ease" }}
-      />
-      {/* Drawer */}
-      <div style={{
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(6,6,16,0.6)", backdropFilter: "blur(4px)", animation: "fadeIn 0.2s ease" }} />
+      <div style={brutalist ? {
         position: "fixed", top: 0, left: 0, bottom: 0, width: 300, maxWidth: "85vw",
         zIndex: 401, display: "flex", flexDirection: "column",
-        background: "rgba(10,10,24,0.97)",
-        backdropFilter: "blur(30px) saturate(180%)",
+        background: "#f5f0e8", borderRight: "3px solid #111",
+        boxShadow: "6px 0 0 #111",
+        animation: "drawerSlideIn 0.25s ease",
+      } : {
+        position: "fixed", top: 0, left: 0, bottom: 0, width: 300, maxWidth: "85vw",
+        zIndex: 401, display: "flex", flexDirection: "column",
+        background: "rgba(10,10,24,0.97)", backdropFilter: "blur(30px) saturate(180%)",
         borderRight: "1px solid rgba(255,255,255,0.09)",
         boxShadow: "4px 0 40px rgba(0,0,0,0.6)",
         animation: "drawerSlideIn 0.28s cubic-bezier(0.32,0.72,0,1)",
       }}>
-        {/* Drawer header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={brutalist ? { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: "2.5px solid #111" } :
+          { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, color: "#e2e8f0" }}>Inboxes</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: "1.5px", marginTop: 2 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 16, color: brutalist ? "#111" : "#e2e8f0", letterSpacing: brutalist ? "-0.3px" : 0 }}>Inboxes</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: brutalist ? "#555" : "rgba(255,255,255,0.3)", letterSpacing: "1.5px", marginTop: 2 }}>
               {accounts.length} ADDRESS{accounts.length !== 1 ? "ES" : ""}
             </div>
           </div>
-          <button onClick={onClose} style={{ ...iconBtnBase("rgba(255,255,255,0.4)"), width: 32, height: 32, borderRadius: 8 }}>
+          <button onClick={onClose} style={brutalist ? brutalistIconBtn() : { ...iconBtnBase("rgba(255,255,255,0.4)"), width: 32, height: 32, borderRadius: 8 }}>
             <Icon.Close size={15} />
           </button>
         </div>
 
-        {/* Account list */}
         <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
           {accounts.length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 16px", color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+            <div style={{ textAlign: "center", padding: "40px 16px", color: brutalist ? "#555" : "rgba(255,255,255,0.25)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
               No saved inboxes yet
             </div>
           )}
           {accounts.map((acc, i) => {
             const isActive = acc.address === activeAddress;
-            const hue = hashStr(acc.address) % 360;
-            const initials = acc.address[0].toUpperCase();
             return (
-              <div
-                key={acc.address}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "12px 10px", borderRadius: 12, marginBottom: 4,
-                  background: isActive ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
-                  border: isActive ? "1px solid rgba(99,102,241,0.35)" : "1px solid transparent",
-                  transition: "all 0.15s",
-                  animation: `fadeUp 0.3s ${i * 50}ms both ease`,
-                  cursor: isActive ? "default" : "pointer",
-                }}
-                onClick={() => !isActive && onSwitch(acc)}
-              >
-                {/* Avatar */}
-                <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: `hsl(${hue},40%,24%)`, border: `1px solid hsl(${hue},40%,34%)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, color: `hsl(${hue},60%,75%)`, userSelect: "none" }}>
-                  {initials}
-                </div>
-                {/* Address info */}
+              <div key={acc.address} onClick={() => !isActive && onSwitch(acc)} style={brutalist ? {
+                display: "flex", alignItems: "center", gap: 12, padding: "11px 10px",
+                marginBottom: 6, background: isActive ? "#fff" : "transparent",
+                border: isActive ? "2.5px solid #111" : "2px solid transparent",
+                boxShadow: isActive ? "3px 3px 0 #111" : "none",
+                cursor: isActive ? "default" : "pointer", transition: "all 0.1s",
+                animation: `fadeUp 0.3s ${i * 50}ms both ease`,
+              } : {
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 10px", borderRadius: 12, marginBottom: 4,
+                background: isActive ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
+                border: isActive ? "1px solid rgba(99,102,241,0.35)" : "1px solid transparent",
+                transition: "all 0.15s", animation: `fadeUp 0.3s ${i * 50}ms both ease`,
+                cursor: isActive ? "default" : "pointer",
+              }}>
+                {/* No avatar — just a colored dot */}
+                <div style={{ width: 10, height: 10, borderRadius: brutalist ? 0 : "50%", flexShrink: 0, background: isActive ? (brutalist ? "#111" : "#818cf8") : (brutalist ? "#888" : "rgba(255,255,255,0.2)"), border: brutalist ? "1.5px solid #111" : "none" }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: isActive ? "#c7d2fe" : "rgba(255,255,255,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: isActive ? 500 : 400 }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: brutalist ? (isActive ? "#111" : "#444") : (isActive ? "#c7d2fe" : "rgba(255,255,255,0.6)"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: isActive ? 700 : 400 }}>
                     {acc.address}
                   </div>
-                  {isActive && (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#818cf8", letterSpacing: "1px", marginTop: 2 }}>● ACTIVE</div>
-                  )}
+                  {isActive && <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: brutalist ? "#111" : "#818cf8", letterSpacing: "1px", marginTop: 2, fontWeight: 700 }}>● ACTIVE</div>}
                 </div>
-                {/* Actions */}
                 <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                  {!isActive && (
-                    <button
-                      onClick={e => { e.stopPropagation(); onSwitch(acc); }}
-                      title="Switch to this inbox"
-                      style={iconBtnBase("rgba(129,140,248,0.8)")}
-                    >
-                      <Icon.SwitchHoriz size={12} />
-                    </button>
-                  )}
-                  <button
-                    onClick={e => { e.stopPropagation(); onDeleteAccount(acc.address); }}
-                    title="Remove this inbox"
-                    style={iconBtnBase("rgba(248,113,113,0.6)")}
-                  >
-                    <Icon.Delete size={12} />
-                  </button>
+                  {!isActive && <button onClick={e => { e.stopPropagation(); onSwitch(acc); }} title="Switch" style={brutalist ? brutalistIconBtn() : iconBtnBase("rgba(129,140,248,0.8)")}><Icon.SwitchHoriz size={12} /></button>}
+                  <button onClick={e => { e.stopPropagation(); onDeleteAccount(acc.address); }} title="Remove" style={brutalist ? { ...brutalistIconBtn(), color: "#cc0000" } : iconBtnBase("rgba(248,113,113,0.6)")}><Icon.Delete size={12} /></button>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Add new */}
-        <div style={{ padding: "14px 16px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <CooldownButton
-            icon={<Icon.New size={13} />}
-            label="Add new inbox"
-            onClick={() => { onAddNew(); onClose(); }}
-            cooldown={newCooldown}
-            limitMs={NEW_ADDR_LIMIT}
-            disabled={loadingAddr}
-            primary
-          />
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 10, textAlign: "center", letterSpacing: "1px" }}>
-            FAST · PRIVATE · DISPOSABLE
-          </div>
+        <div style={{ padding: "14px 16px", borderTop: brutalist ? "2.5px solid #111" : "1px solid rgba(255,255,255,0.07)" }}>
+          <CooldownButton icon={<Icon.New size={13} />} label="Add new inbox" onClick={() => { onAddNew(); onClose(); }} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} disabled={loadingAddr} primary brutalist={brutalist} />
         </div>
       </div>
 
@@ -540,16 +673,15 @@ function AccountsDrawer({ open, onClose, accounts, activeAddress, onSwitch, onDe
 }
 
 function iconBtnBase(color) {
-  return {
-    display: "flex", alignItems: "center", justifyContent: "center",
-    width: 28, height: 28, borderRadius: 7, border: "none",
-    background: "rgba(255,255,255,0.06)", cursor: "pointer",
-    color, transition: "background 0.15s",
-  };
+  return { display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 7, border: "none", background: "rgba(255,255,255,0.06)", cursor: "pointer", color, transition: "background 0.15s" };
 }
 
-// ─── Address card with custom email support ───────────────────────────────────
-function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSetCustom, newCooldown, refreshCooldown, loading }) {
+function brutalistIconBtn() {
+  return { display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, border: "2px solid #111", background: "#f5f0e8", cursor: "pointer", color: "#111", borderRadius: 0, transition: "all 0.1s" };
+}
+
+// ─── Address card ─────────────────────────────────────────────────────────────
+function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSetCustom, newCooldown, refreshCooldown, loading, brutalist }) {
   const [customMode, setCustomMode] = useState(false);
   const [customLocal, setCustomLocal] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -567,75 +699,90 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
     if (!selectedDomain) { setCustomError("No domain available."); return; }
     setCustomError("");
     onSetCustom(local + "@" + selectedDomain);
-    setCustomMode(false);
-    setCustomLocal("");
+    setCustomMode(false); setCustomLocal("");
   };
+
+  if (brutalist) {
+    return (
+      <Glass brutalist style={{ padding: "24px 24px 20px", animation: "fadeUp 0.4s ease" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "2px", color: "#888", fontWeight: 700 }}>YOUR TEMP ADDRESS</div>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "2px", color: "#111", display: "flex", alignItems: "center", gap: 5, background: "#c8f7c5", border: "1.5px solid #111", padding: "2px 8px" }}>
+            <span style={{ display: "inline-block", width: 6, height: 6, background: "#00aa44", border: "1px solid #111" }} /> LIVE
+          </div>
+        </div>
+
+        {!customMode ? (
+          <>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: "clamp(13px,3vw,17px)", fontWeight: 700, color: loading ? "#888" : "#111", marginBottom: 16, wordBreak: "break-all", borderBottom: "2px solid #111", paddingBottom: 12 }}>
+              {loading ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner dark /> generating…</span> : (address || "—")}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {address && !loading && <button onClick={onCopy} style={brutalistBtn("primary")}><Icon.Copy size={13} /> Copy</button>}
+              <CooldownButton icon={<Icon.New size={13} />} label="New" onClick={onNew} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} disabled={loading} primary brutalist />
+              <CooldownButton icon={<Icon.Refresh size={13} />} label="Refresh" onClick={onRefresh} cooldown={refreshCooldown} limitMs={REFRESH_LIMIT} disabled={loading || !address} brutalist />
+              <button onClick={() => setCustomMode(true)} style={brutalistBtn()} disabled={loading || !availableDomains.length}><Icon.Edit size={13} /> Custom</button>
+            </div>
+          </>
+        ) : (
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#555", marginBottom: 10, fontWeight: 700 }}>CHOOSE USERNAME:</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+              <input autoFocus value={customLocal} onChange={e => { setCustomLocal(e.target.value); setCustomError(""); }} onKeyDown={e => e.key === "Enter" && handleCustomSubmit()} placeholder="username" style={{ flex: 1, minWidth: 100, background: "#fff", border: "2.5px solid #111", padding: "8px 10px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", outline: "none", boxShadow: "3px 3px 0 #111" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "#111", fontWeight: 700 }}>@</span>
+              {availableDomains.length > 1 ? (
+                <select value={selectedDomain} onChange={e => setSelectedDomain(e.target.value)} style={{ background: "#fff", border: "2.5px solid #111", padding: "8px 10px", fontFamily: "var(--font-mono)", fontSize: 12, color: "#111", outline: "none", cursor: "pointer" }}>
+                  {availableDomains.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              ) : <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#555" }}>{selectedDomain}</span>}
+            </div>
+            {customError && <div style={{ color: "#cc0000", fontSize: 11, fontFamily: "var(--font-mono)", marginBottom: 8, fontWeight: 700 }}>{customError}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={handleCustomSubmit} style={brutalistBtn("primary")}><Icon.Check size={13} /> Use this</button>
+              <button onClick={() => { setCustomMode(false); setCustomError(""); }} style={brutalistBtn()}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </Glass>
+    );
+  }
 
   return (
     <Glass style={{ padding: "28px 28px 24px", position: "relative", overflow: "hidden", animation: "fadeUp 0.5s ease" }}>
       <div style={{ position: "absolute", top: -80, right: -80, width: 280, height: 280, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.10), transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: -60, left: -40, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(244,114,182,0.06), transparent 70%)", pointerEvents: "none" }} />
-
-      {/* nano-mail inspired: "FAST · PRIVATE · DISPOSABLE" tag */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ fontSize: 10, letterSpacing: "2.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-mono)" }}>
-          Your temporary address
-        </div>
+        <div style={{ fontSize: 10, letterSpacing: "2.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-mono)" }}>Your temporary address</div>
         <div style={{ fontSize: 9, letterSpacing: "2px", color: "rgba(129,140,248,0.5)", fontFamily: "var(--font-mono)", display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "rgba(74,222,128,0.7)", animation: "livePulse 2s infinite" }} />
-          DISPOSABLE
+          <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "rgba(74,222,128,0.7)", animation: "livePulse 2s infinite" }} /> DISPOSABLE
         </div>
       </div>
 
       {!customMode ? (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{
-              flex: 1, minWidth: 0,
-              fontFamily: "var(--font-mono)", fontSize: "clamp(13px,3vw,18px)", fontWeight: 500,
-              color: loading ? "rgba(255,255,255,0.3)" : "#e2e8f0",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              fontStyle: loading ? "italic" : "normal",
-            }}>
-              {loading
-                ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner /> generating…</span>
-                : address
-                  ? <span className="glitch-text" data-text={address}>{address}</span>
-                  : "—"
-              }
+            <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-mono)", fontSize: "clamp(13px,3vw,18px)", fontWeight: 500, color: loading ? "rgba(255,255,255,0.3)" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: loading ? "italic" : "normal" }}>
+              {loading ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner /> generating…</span> : address ? <span className="glitch-text" data-text={address}>{address}</span> : "—"}
             </div>
-            {address && !loading && (
-              <button onClick={onCopy} style={btnStyle("ghost")}><Icon.Copy size={13} /> Copy</button>
-            )}
+            {address && !loading && <button onClick={onCopy} style={btnStyle("ghost")}><Icon.Copy size={13} /> Copy</button>}
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
             <CooldownButton icon={<Icon.New size={13} />} label="New address" onClick={onNew} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} disabled={loading} primary />
             <CooldownButton icon={<Icon.Refresh size={13} />} label="Refresh" onClick={onRefresh} cooldown={refreshCooldown} limitMs={REFRESH_LIMIT} disabled={loading || !address} />
-            <button onClick={() => setCustomMode(true)} style={btnStyle("ghost")} disabled={loading || !availableDomains.length}>
-              <Icon.Edit size={13} /> Custom
-            </button>
+            <button onClick={() => setCustomMode(true)} style={btnStyle("ghost")} disabled={loading || !availableDomains.length}><Icon.Edit size={13} /> Custom</button>
           </div>
         </>
       ) : (
         <div style={{ animation: "fadeUp 0.25s ease" }}>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono)", marginBottom: 10 }}>Choose your own username:</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <input
-              autoFocus
-              value={customLocal}
-              onChange={e => { setCustomLocal(e.target.value); setCustomError(""); }}
-              onKeyDown={e => e.key === "Enter" && handleCustomSubmit()}
-              placeholder="username"
-              style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 14px", fontFamily: "var(--font-mono)", fontSize: 14, color: "#e2e8f0", outline: "none" }}
-            />
+            <input autoFocus value={customLocal} onChange={e => { setCustomLocal(e.target.value); setCustomError(""); }} onKeyDown={e => e.key === "Enter" && handleCustomSubmit()} placeholder="username" style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 14px", fontFamily: "var(--font-mono)", fontSize: 14, color: "#e2e8f0", outline: "none" }} />
             <span style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-mono)", fontSize: 14, whiteSpace: "nowrap" }}>@</span>
             {availableDomains.length > 1 ? (
               <select value={selectedDomain} onChange={e => setSelectedDomain(e.target.value)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 12px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0", outline: "none", cursor: "pointer" }}>
                 {availableDomains.map(d => <option key={d} value={d} style={{ background: "#0f0f1e" }}>{d}</option>)}
               </select>
-            ) : (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "rgba(255,255,255,0.6)" }}>{selectedDomain}</span>
-            )}
+            ) : <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "rgba(255,255,255,0.6)" }}>{selectedDomain}</span>}
           </div>
           {customError && <div style={{ color: "#f87171", fontSize: 11, fontFamily: "var(--font-mono)", marginTop: 6 }}>{customError}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -649,14 +796,15 @@ function AddressCard({ address, availableDomains, onCopy, onNew, onRefresh, onSe
 }
 
 // ─── Cooldown button ──────────────────────────────────────────────────────────
-function CooldownButton({ icon, label, onClick, cooldown, limitMs, disabled, primary }) {
+function CooldownButton({ icon, label, onClick, cooldown, limitMs, disabled, primary, brutalist }) {
   const pct = cooldown > 0 ? Math.round((1 - cooldown / limitMs) * 100) : 100;
   const isBlocked = cooldown > 0;
   const secs = Math.ceil(cooldown / 1000);
+  const baseStyle = brutalist ? brutalistBtn(primary ? "primary" : "") : btnStyle(primary ? "primary" : "ghost");
   return (
     <button onClick={!isBlocked && !disabled ? onClick : undefined} disabled={isBlocked || disabled}
-      style={{ ...btnStyle(primary ? "primary" : "ghost"), position: "relative", overflow: "hidden", opacity: isBlocked || disabled ? 0.55 : 1, cursor: isBlocked || disabled ? "not-allowed" : "pointer" }}>
-      {isBlocked && <span style={{ position: "absolute", inset: 0, left: 0, background: "rgba(99,102,241,0.18)", width: pct + "%", transition: "width 0.5s linear", borderRadius: "inherit" }} />}
+      style={{ ...baseStyle, position: "relative", overflow: "hidden", opacity: isBlocked || disabled ? 0.55 : 1, cursor: isBlocked || disabled ? "not-allowed" : "pointer" }}>
+      {isBlocked && !brutalist && <span style={{ position: "absolute", inset: 0, left: 0, background: "rgba(99,102,241,0.18)", width: pct + "%", transition: "width 0.5s linear", borderRadius: "inherit" }} />}
       <span style={{ position: "relative", display: "flex", alignItems: "center", gap: 6 }}>
         {isBlocked ? <><Icon.Clock size={13} /> {secs}s</> : <>{icon} {label}</>}
       </span>
@@ -665,33 +813,29 @@ function CooldownButton({ icon, label, onClick, cooldown, limitMs, disabled, pri
 }
 
 // ─── Search bar ───────────────────────────────────────────────────────────────
-function SearchBar({ value, onChange }) {
+function SearchBar({ value, onChange, brutalist }) {
   return (
-    <div style={{ position: "relative", marginBottom: 0 }}>
-      <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", pointerEvents: "none" }}>
+    <div style={{ position: "relative" }}>
+      <div style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: brutalist ? "#888" : "rgba(255,255,255,0.3)", pointerEvents: "none" }}>
         <Icon.Search size={14} />
       </div>
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder="Search messages…"
-        style={{
-          width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 12, padding: "10px 14px 10px 36px",
-          fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0",
-          outline: "none", transition: "border 0.2s",
-        }}
-      />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder="Search messages…" style={brutalist ? {
+        width: "100%", background: "#fff", border: "2px solid #ccc", borderRadius: 0,
+        padding: "9px 12px 9px 34px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", outline: "none",
+      } : {
+        width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 12, padding: "10px 14px 10px 36px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#e2e8f0", outline: "none",
+      }} />
     </div>
   );
 }
 
 // ─── Inbox view ───────────────────────────────────────────────────────────────
-function InboxView({ messages, onOpen, onDelete, onStar, onMarkRead, loading, starredIds, search }) {
+function InboxView({ messages, onOpen, onDelete, onStar, onMarkRead, loading, starredIds, search, brutalist }) {
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "rgba(255,255,255,0.3)", gap: 10, fontFamily: "var(--font-mono)", fontSize: 13 }}>
-        <Spinner /> Loading messages…
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: brutalist ? "#555" : "rgba(255,255,255,0.3)", gap: 10, fontFamily: "var(--font-mono)", fontSize: 13 }}>
+        <Spinner dark={brutalist} /> Loading messages…
       </div>
     );
   }
@@ -704,17 +848,14 @@ function InboxView({ messages, onOpen, onDelete, onStar, onMarkRead, loading, st
 
   if (!filtered.length) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "56px 24px", color: "rgba(255,255,255,0.25)" }}>
-        <div style={{ opacity: 0.35, animation: "terminalPulse 3s ease-in-out infinite" }}><Icon.Mail size={40} /></div>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "56px 24px", color: brutalist ? "#888" : "rgba(255,255,255,0.25)" }}>
+        <div style={{ opacity: 0.4, animation: brutalist ? "none" : "terminalPulse 3s ease-in-out infinite" }}><Icon.Mail size={36} /></div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 700, color: brutalist ? "#555" : "rgba(255,255,255,0.4)" }}>
           {search ? "No matching messages" : "Waiting for mail"}
         </div>
-        {/* nano-mail inspired terminal cursor empty state */}
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, textAlign: "center", lineHeight: 1.7, maxWidth: 280, color: "rgba(255,255,255,0.28)" }}>
-          {search
-            ? "Try a different search term."
-            : <>Copy your address above and paste it anywhere.<br /><span style={{ color: "rgba(129,140,248,0.5)" }}>inbox listening<span className="term-cursor" /></span></>
-          }
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, textAlign: "center", lineHeight: 1.7, maxWidth: 280, color: brutalist ? "#888" : "rgba(255,255,255,0.28)" }}>
+          {search ? "Try a different search term." : "Copy your address above and paste it anywhere."}
+          {!search && !brutalist && <><br /><span style={{ color: "rgba(129,140,248,0.5)" }}>inbox listening<span className="term-cursor" /></span></>}
         </div>
       </div>
     );
@@ -723,45 +864,72 @@ function InboxView({ messages, onOpen, onDelete, onStar, onMarkRead, loading, st
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {filtered.map((m, i) => (
-        <MessageRow
-          key={m.id} msg={m} onClick={() => onOpen(m.id)} delay={i * 40}
+        <MessageRow key={m.id} msg={m} onClick={() => onOpen(m.id)} delay={i * 40}
           onDelete={e => { e.stopPropagation(); onDelete(m.id); }}
           onStar={e => { e.stopPropagation(); onStar(m.id); }}
           onMarkRead={e => { e.stopPropagation(); onMarkRead(m.id); }}
-          starred={starredIds.has(m.id)}
-        />
+          starred={starredIds.has(m.id)} brutalist={brutalist} />
       ))}
     </div>
   );
 }
 
-function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred }) {
+// ─── Message row — NO AVATAR ──────────────────────────────────────────────────
+function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred, brutalist }) {
   const [hover, setHover] = useState(false);
-  const initials = (msg.from?.address || "?")[0].toUpperCase();
-  const hue = hashStr(msg.from?.address || "") % 360;
+
+  if (brutalist) {
+    return (
+      <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+        display: "grid", gridTemplateColumns: "1fr auto", gridTemplateRows: "auto auto",
+        columnGap: 12, rowGap: 3, alignItems: "start",
+        padding: "13px 18px",
+        borderBottom: "2px solid #e8e4dc",
+        cursor: "pointer",
+        background: hover ? "#fffdf5" : (msg.seen ? "#fff" : "#fffbf0"),
+        borderLeft: msg.seen ? "none" : "4px solid #111",
+        paddingLeft: msg.seen ? 18 : 14,
+        transition: "background 0.1s",
+        animation: `fadeUp 0.3s ${delay}ms both ease`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          {!msg.seen && <div style={{ width: 7, height: 7, background: "#111", flexShrink: 0, border: "1px solid #111" }} />}
+          {starred && <span style={{ color: "#cc8800", flexShrink: 0 }}><Icon.StarFilled size={11} /></span>}
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: msg.seen ? 400 : 700, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {msg.from?.address || "Unknown sender"}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, gridRow: "1", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", whiteSpace: "nowrap" }}>{timeAgo(msg.createdAt)}</span>
+          {hover && (
+            <div style={{ display: "flex", gap: 2 }}>
+              <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={{ ...brutalistIconBtn(), width: 22, height: 22 }}>{starred ? <Icon.StarFilled size={11} /> : <Icon.Star size={11} />}</button>
+              {!msg.seen && <button onClick={onMarkRead} title="Mark read" style={{ ...brutalistIconBtn(), width: 22, height: 22 }}><Icon.MarkRead size={11} /></button>}
+              <button onClick={onDelete} title="Delete" style={{ ...brutalistIconBtn(), width: 22, height: 22, color: "#cc0000" }}><Icon.Delete size={11} /></button>
+            </div>
+          )}
+        </div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: msg.seen ? "#888" : "#333", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {msg.subject || "(no subject)"}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: "grid", gridTemplateColumns: "40px 1fr auto", gridTemplateRows: "auto auto",
-        columnGap: 12, rowGap: 2, alignItems: "start",
-        padding: "14px 20px",
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
-        cursor: "pointer",
-        background: hover ? "rgba(255,255,255,0.04)" : "transparent",
-        borderLeft: msg.seen ? "none" : "3px solid rgba(99,102,241,0.7)",
-        paddingLeft: msg.seen ? 20 : 17,
-        transition: "background 0.15s",
-        animation: `fadeUp 0.35s ${delay}ms both ease`,
-        position: "relative",
-      }}
-    >
-      <div style={{ gridRow: "span 2", width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: `hsl(${hue},40%,28%)`, border: `1px solid hsl(${hue},40%,38%)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700, color: `hsl(${hue},60%,80%)`, userSelect: "none" }}>
-        {initials}
-      </div>
+    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+      display: "grid", gridTemplateColumns: "1fr auto", gridTemplateRows: "auto auto",
+      columnGap: 12, rowGap: 2, alignItems: "start",
+      padding: "14px 20px",
+      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      cursor: "pointer",
+      background: hover ? "rgba(255,255,255,0.04)" : "transparent",
+      borderLeft: msg.seen ? "none" : "3px solid rgba(99,102,241,0.7)",
+      paddingLeft: msg.seen ? 20 : 17,
+      transition: "background 0.15s",
+      animation: `fadeUp 0.35s ${delay}ms both ease`,
+      position: "relative",
+    }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
         {starred && <span style={{ color: "#fbbf24", flexShrink: 0 }}><Icon.StarFilled size={11} /></span>}
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: msg.seen ? 400 : 600, color: msg.seen ? "rgba(255,255,255,0.65)" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -772,12 +940,8 @@ function MessageRow({ msg, onClick, delay, onDelete, onStar, onMarkRead, starred
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{timeAgo(msg.createdAt)}</span>
         {hover && (
           <div style={{ display: "flex", gap: 2 }}>
-            <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={iconBtn(starred ? "#fbbf24" : "rgba(255,255,255,0.4)")}>
-              {starred ? <Icon.StarFilled size={12} /> : <Icon.Star size={12} />}
-            </button>
-            {!msg.seen && (
-              <button onClick={onMarkRead} title="Mark as read" style={iconBtn("rgba(255,255,255,0.4)")}><Icon.MarkRead size={12} /></button>
-            )}
+            <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={iconBtn(starred ? "#fbbf24" : "rgba(255,255,255,0.4)")}>{starred ? <Icon.StarFilled size={12} /> : <Icon.Star size={12} />}</button>
+            {!msg.seen && <button onClick={onMarkRead} title="Mark as read" style={iconBtn("rgba(255,255,255,0.4)")}><Icon.MarkRead size={12} /></button>}
             <button onClick={onDelete} title="Delete" style={iconBtn("rgba(248,113,113,0.7)")}><Icon.Delete size={12} /></button>
           </div>
         )}
@@ -794,7 +958,7 @@ function iconBtn(color) {
 }
 
 // ─── Message viewer ───────────────────────────────────────────────────────────
-function MessageViewer({ msg, onClose, onDelete, onStar, starred }) {
+function MessageViewer({ msg, onClose, onDelete, onStar, starred, brutalist }) {
   const iframeRef = useRef(null);
 
   useEffect(() => {
@@ -811,12 +975,39 @@ function MessageViewer({ msg, onClose, onDelete, onStar, starred }) {
 
   if (!msg) return null;
   const html = msg.html ? (Array.isArray(msg.html) ? msg.html.join("") : msg.html) : null;
-
   const downloadText = () => {
     const blob = new Blob([msg.text || msg.subject || ""], { type: "text/plain" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = `email-${msg.id}.txt`; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `email-${msg.id}.txt`; a.click();
   };
+
+  if (brutalist) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "#f5f0e8", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", background: "#fff", borderBottom: "3px solid #111", flexWrap: "wrap", rowGap: 8 }}>
+          <button onClick={onClose} style={brutalistBtn()}><Icon.Back size={14} /> Back</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 900, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.subject || "(no subject)"}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#555", marginTop: 2 }}>From: {msg.from?.address || "Unknown"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#888", whiteSpace: "nowrap" }}>{new Date(msg.createdAt).toLocaleString()}</span>
+            <button onClick={onStar} style={{ ...brutalistBtn(), color: starred ? "#cc8800" : "#111", padding: "7px 10px" }}>{starred ? <Icon.StarFilled size={13} /> : <Icon.Star size={13} />}</button>
+            <button onClick={downloadText} style={{ ...brutalistBtn(), padding: "7px 10px" }}><Icon.Download size={13} /></button>
+            <button onClick={() => onDelete(msg.id)} style={{ ...brutalistBtn(), color: "#cc0000", padding: "7px 10px" }}><Icon.Delete size={13} /></button>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: "24px" }}>
+          <div style={{ maxWidth: 720, margin: "0 auto", background: "#fff", border: "3px solid #111", boxShadow: "6px 6px 0 #111" }}>
+            {html ? <iframe ref={iframeRef} sandbox="allow-same-origin" style={{ width: "100%", border: "none", minHeight: 300, display: "block", background: "#fff" }} /> : (
+              <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)", fontSize: 13, lineHeight: 1.8, color: "#111", padding: 24, margin: 0 }}>
+                {msg.text || "(empty message)"}
+              </pre>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(6,6,16,0.88)", backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", animation: "msgOverlayIn 0.28s cubic-bezier(0.32,0.72,0,1)" }}>
@@ -832,18 +1023,14 @@ function MessageViewer({ msg, onClose, onDelete, onStar, starred }) {
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{new Date(msg.createdAt).toLocaleString()}</span>
-          <button onClick={onStar} title={starred ? "Unstar" : "Star"} style={{ ...btnStyle("ghost"), color: starred ? "#fbbf24" : undefined, padding: "7px 10px" }}>
-            {starred ? <Icon.StarFilled size={13} /> : <Icon.Star size={13} />}
-          </button>
-          <button onClick={downloadText} title="Download as .txt" style={{ ...btnStyle("ghost"), padding: "7px 10px" }}><Icon.Download size={13} /></button>
-          <button onClick={() => onDelete(msg.id)} title="Delete" style={{ ...btnStyle("ghost"), color: "#f87171", padding: "7px 10px" }}><Icon.Delete size={13} /></button>
+          <button onClick={onStar} style={{ ...btnStyle("ghost"), color: starred ? "#fbbf24" : undefined, padding: "7px 10px" }}>{starred ? <Icon.StarFilled size={13} /> : <Icon.Star size={13} />}</button>
+          <button onClick={downloadText} style={{ ...btnStyle("ghost"), padding: "7px 10px" }}><Icon.Download size={13} /></button>
+          <button onClick={() => onDelete(msg.id)} style={{ ...btnStyle("ghost"), color: "#f87171", padding: "7px 10px" }}><Icon.Delete size={13} /></button>
         </div>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: "24px", animation: "msgPanelIn 0.4s 0.05s cubic-bezier(0.32,0.72,0,1) both" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
-          {html ? (
-            <iframe ref={iframeRef} sandbox="allow-same-origin" style={{ width: "100%", border: "none", minHeight: 300, display: "block", background: "#fff" }} />
-          ) : (
+          {html ? <iframe ref={iframeRef} sandbox="allow-same-origin" style={{ width: "100%", border: "none", minHeight: 300, display: "block", background: "#fff" }} /> : (
             <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "var(--font-mono)", fontSize: 13, lineHeight: 1.8, color: "rgba(255,255,255,0.75)", padding: 24, margin: 0 }}>
               {msg.text || "(empty message)"}
             </pre>
@@ -855,18 +1042,37 @@ function MessageViewer({ msg, onClose, onDelete, onStar, starred }) {
 }
 
 // ─── Guide view ───────────────────────────────────────────────────────────────
-const GuideView = memo(function GuideView() {
+const GuideView = memo(function GuideView({ brutalist }) {
   const steps = [
-    { icon: <Icon.Shield size={20} />, title: "Auto-generated address", body: "A random temporary email is created the moment you open the app. No sign-up, no personal data required." },
+    { icon: <Icon.Shield size={20} />, title: "Auto-generated address", body: "A random temporary email is created the moment you open the app. No sign-up required." },
     { icon: <Icon.Edit size={20} />, title: "Or pick your own username", body: "Hit Custom to enter your preferred username and choose from available domains." },
     { icon: <Icon.Copy size={20} />, title: "Copy & use it anywhere", body: "Hit Copy and paste it into any site asking for your email — sign-ups, verifications, free trials." },
-    { icon: <Icon.Inbox size={20} />, title: "Emails arrive automatically", body: "Your inbox auto-refreshes every 15 seconds. New emails show an unread indicator — click any to open." },
-    { icon: <Icon.Star size={20} />, title: "Star & manage emails", body: "Hover a message to star it, mark it read, or delete it. Inside a message you can also download the content." },
+    { icon: <Icon.Inbox size={20} />, title: "Emails arrive automatically", body: "Your inbox auto-refreshes every 15 seconds. New emails show an unread indicator." },
+    { icon: <Icon.Star size={20} />, title: "Star & manage emails", body: "Hover a message to star it, mark it read, or delete it." },
     { icon: <Icon.Search size={20} />, title: "Search your inbox", body: "Use the search bar to filter messages by sender or subject instantly." },
-    { icon: <Icon.Hamburger size={20} />, title: "Multiple inboxes", body: "Tap the menu icon (top-left) to manage multiple addresses. Switch between them instantly — each keeps its own session." },
+    { icon: <Icon.Hamburger size={20} />, title: "Multiple inboxes", body: "Tap the menu icon to manage multiple addresses and switch between them." },
+    { icon: <Icon.User size={20} />, title: "Sign in to sync", body: "Create a free account to save your inboxes to Cloudflare KV — access them on any device." },
     { icon: <Icon.New size={20} />, title: "Need a fresh address?", body: "Hit New Address for a brand-new random one. Once per minute to prevent abuse." },
-    { icon: <Icon.Settings size={20} />, title: "Your session is saved", body: "Your address and token are stored in a cookie for 30 days so you don't lose access on page refresh." },
   ];
+
+  if (brutalist) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 900, color: "#111", marginBottom: 4, letterSpacing: "-0.5px" }}>HOW TO USE</div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555", marginBottom: 16, borderBottom: "2.5px solid #111", paddingBottom: 12 }}>A disposable inbox with zero setup.</div>
+        {steps.map((s, i) => (
+          <div key={i} style={{ padding: "16px 18px", display: "flex", gap: 14, alignItems: "flex-start", background: "#fff", border: "2.5px solid #111", boxShadow: "4px 4px 0 #111", marginBottom: 8 }}>
+            <div style={{ color: "#111", flexShrink: 0, marginTop: 1 }}>{s.icon}</div>
+            <div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 900, color: "#111", marginBottom: 4, letterSpacing: "-0.2px" }}>{s.title}</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#555", lineHeight: 1.7 }}>{s.body}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: "#e2e8f0", marginBottom: 4 }}>How to use BurnerMail</div>
@@ -884,91 +1090,170 @@ const GuideView = memo(function GuideView() {
   );
 });
 
-// ─── Sun / Moon ───────────────────────────────────────────────────────────────
-const SunIcon = () => (
-  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-  </svg>
-);
-const MoonIcon = () => (
-  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-  </svg>
-);
+// ─── Sun / Moon / Brutalist icons ─────────────────────────────────────────────
+const SunIcon = () => <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+const MoonIcon = () => <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>;
 
 // ─── Settings view ────────────────────────────────────────────────────────────
-function SettingsView({ address, onClearCookies, onNew, newCooldown, lightMode, onToggleLight }) {
-  const lbl = { fontSize: 10, letterSpacing: "2px", textTransform: "uppercase", color: lightMode ? "rgba(0,0,0,0.38)" : "rgba(255,255,255,0.3)", fontFamily: "var(--font-mono)", marginBottom: 12 };
-  const bodyTxt = { fontFamily: "var(--font-mono)", fontSize: 12, color: lightMode ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)", lineHeight: 1.7 };
-  const glassLight = lightMode ? { background: "rgba(255,255,255,0.75)", border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" } : {};
+function SettingsView({ address, onClearCookies, onNew, newCooldown, theme, onSetTheme, authedUser, onSignIn, onSignOut, brutalist }) {
+  const lbl = brutalist
+    ? { fontSize: 10, letterSpacing: "2.5px", textTransform: "uppercase", color: "#888", fontFamily: "var(--font-mono)", marginBottom: 10, fontWeight: 700 }
+    : { fontSize: 10, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-mono)", marginBottom: 12 };
+  const bodyTxt = brutalist
+    ? { fontFamily: "var(--font-mono)", fontSize: 12, color: "#555", lineHeight: 1.7 }
+    : { fontFamily: "var(--font-mono)", fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.7 };
+
+  const themes = [
+    { id: "dark",     label: "Dark",       desc: "Default deep dark with glows" },
+    { id: "light",    label: "Light",      desc: "Soft ambient light mode" },
+    { id: "brutalist",label: "Neo-Brutal", desc: "Cream & black, stark borders" },
+  ];
+
+  if (brutalist) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 900, color: "#111", marginBottom: 4, letterSpacing: "-0.5px" }}>SETTINGS</div>
+
+        {/* Theme */}
+        <div style={{ background: "#fff", border: "2.5px solid #111", boxShadow: "5px 5px 0 #111", padding: "20px 22px", marginBottom: 8 }}>
+          <div style={lbl}>THEME</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {themes.map(t => (
+              <div key={t.id} onClick={() => onSetTheme(t.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", cursor: "pointer", border: theme === t.id ? "2.5px solid #111" : "2px solid #ccc", background: theme === t.id ? "#f5f0e8" : "#fff", boxShadow: theme === t.id ? "3px 3px 0 #111" : "none", transition: "all 0.1s" }}>
+                <div style={{ width: 18, height: 18, border: "2px solid #111", background: theme === t.id ? "#111" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {theme === t.id && <div style={{ width: 8, height: 8, background: "#f5f0e8" }} />}
+                </div>
+                <div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 900, color: "#111" }}>{t.label}</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#666" }}>{t.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Account */}
+        <div style={{ background: "#fff", border: "2.5px solid #111", boxShadow: "5px 5px 0 #111", padding: "20px 22px", marginBottom: 8 }}>
+          <div style={lbl}>ACCOUNT</div>
+          {authedUser ? (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 12px", background: "#c8f7c5", border: "2px solid #111" }}>
+                <Icon.User size={15} />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "#111" }}>{authedUser}</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#007722", letterSpacing: "1px", fontWeight: 700 }}>SIGNED IN</span>
+              </div>
+              <div style={bodyTxt}>Your inboxes are synced to Cloudflare.</div>
+              <button onClick={onSignOut} style={{ ...brutalistBtn(), color: "#cc0000", marginTop: 10 }}><Icon.LogOut size={13} /> Sign out</button>
+            </div>
+          ) : (
+            <div>
+              <div style={bodyTxt}>Sign in to save your inboxes across devices via Cloudflare KV.</div>
+              <button onClick={onSignIn} style={{ ...brutalistBtn("primary"), marginTop: 10 }}><Icon.User size={13} /> Sign in / Register</button>
+            </div>
+          )}
+        </div>
+
+        {/* Address */}
+        <div style={{ background: "#fff", border: "2.5px solid #111", boxShadow: "5px 5px 0 #111", padding: "20px 22px", marginBottom: 8 }}>
+          <div style={lbl}>CURRENT ADDRESS</div>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "#111", wordBreak: "break-all", marginBottom: 14, borderBottom: "1.5px solid #e8e4dc", paddingBottom: 12, fontWeight: 700 }}>{address || "Not generated yet"}</div>
+          <CooldownButton icon={<Icon.New size={13} />} label="Generate new" onClick={onNew} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} primary brutalist />
+        </div>
+
+        {/* Storage */}
+        <div style={{ background: "#fff", border: "2.5px solid #111", boxShadow: "5px 5px 0 #111", padding: "20px 22px" }}>
+          <div style={lbl}>STORAGE & LIMITS</div>
+          <div style={{ ...bodyTxt, marginBottom: 14 }}>Session saved in cookie for 30 days. Rate limits: 60s new address, 10s refresh, 15s auto-poll.</div>
+          <button onClick={onClearCookies} style={{ ...brutalistBtn(), color: "#cc0000" }}><Icon.Delete size={13} /> Clear all data</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, animation: "fadeUp 0.4s ease" }}>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: lightMode ? "#1a1a2e" : "#e2e8f0", marginBottom: 4 }}>Settings</div>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: "#e2e8f0", marginBottom: 4 }}>Settings</div>
 
-      <Glass style={{ padding: "20px 22px", ...glassLight }}>
-        <div style={lbl}>Appearance</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600, color: lightMode ? "#1a1a2e" : "#e2e8f0", marginBottom: 3 }}>{lightMode ? "Light mode" : "Dark mode"}</div>
-            <div style={bodyTxt}>Switch between light and dark themes.</div>
-          </div>
-          <div onClick={onToggleLight} style={{ width: 50, height: 27, borderRadius: 999, cursor: "pointer", flexShrink: 0, marginLeft: 20, background: lightMode ? "linear-gradient(135deg,#818cf8,#a78bfa)" : "rgba(255,255,255,0.1)", border: lightMode ? "none" : "1px solid rgba(255,255,255,0.14)", position: "relative", transition: "all 0.25s ease", boxShadow: lightMode ? "0 2px 10px rgba(99,102,241,0.4)" : "none" }}>
-            <div style={{ position: "absolute", top: 3, left: lightMode ? 23 : 3, width: 21, height: 21, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.25s cubic-bezier(0.34,1.56,0.64,1)", display: "flex", alignItems: "center", justifyContent: "center", color: lightMode ? "#818cf8" : "#64748b" }}>
-              {lightMode ? <SunIcon /> : <MoonIcon />}
+      {/* Theme picker */}
+      <Glass style={{ padding: "20px 22px" }}>
+        <div style={lbl}>Theme</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {themes.map(t => (
+            <div key={t.id} onClick={() => onSetTheme(t.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, cursor: "pointer", background: theme === t.id ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)", border: theme === t.id ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.07)", transition: "all 0.18s" }}>
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: theme === t.id ? "2px solid #818cf8" : "2px solid rgba(255,255,255,0.2)", background: theme === t.id ? "#818cf8" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {theme === t.id && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
+              </div>
+              <div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{t.label}</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{t.desc}</div>
+              </div>
             </div>
+          ))}
+        </div>
+      </Glass>
+
+      {/* Account */}
+      <Glass style={{ padding: "20px 22px" }}>
+        <div style={lbl}>Account</div>
+        {authedUser ? (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 14px", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 10 }}>
+              <Icon.User size={15} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, color: "#4ade80" }}>{authedUser}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(74,222,128,0.6)", letterSpacing: "1px" }}>SIGNED IN</span>
+            </div>
+            <div style={{ ...bodyTxt, marginBottom: 12 }}>Your inboxes are synced to Cloudflare KV.</div>
+            <button onClick={onSignOut} style={{ ...btnStyle("ghost"), color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}><Icon.LogOut size={13} /> Sign out</button>
           </div>
-        </div>
+        ) : (
+          <div>
+            <div style={{ ...bodyTxt, marginBottom: 14 }}>Sign in to save your inboxes to Cloudflare — access them on any device.</div>
+            <button onClick={onSignIn} style={btnStyle("primary")}><Icon.User size={13} /> Sign in / Register</button>
+          </div>
+        )}
       </Glass>
 
-      <Glass style={{ padding: "20px 22px", ...glassLight }}>
+      <Glass style={{ padding: "20px 22px" }}>
         <div style={lbl}>Current address</div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: lightMode ? "#4f46e5" : "#c7d2fe", wordBreak: "break-all", marginBottom: 16 }}>{address || "Not generated yet"}</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <CooldownButton icon={<Icon.New size={13} />} label="Generate new" onClick={onNew} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} primary />
-        </div>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "#c7d2fe", wordBreak: "break-all", marginBottom: 16 }}>{address || "Not generated yet"}</div>
+        <CooldownButton icon={<Icon.New size={13} />} label="Generate new" onClick={onNew} cooldown={newCooldown} limitMs={NEW_ADDR_LIMIT} primary />
       </Glass>
 
-      <Glass style={{ padding: "20px 22px", ...glassLight }}>
+      <Glass style={{ padding: "20px 22px" }}>
         <div style={lbl}>Storage</div>
-        <div style={{ ...bodyTxt, marginBottom: 14 }}>Your address and session token are saved in a cookie for 30 days so you don't lose access on refresh.</div>
-        <button onClick={onClearCookies} style={{ ...btnStyle("ghost"), borderColor: "rgba(248,113,113,0.3)", color: "#f87171" }}>
-          <Icon.Delete size={13} /> Clear all data
-        </button>
-      </Glass>
-
-      <Glass style={{ padding: "20px 22px", ...glassLight }}>
-        <div style={lbl}>Rate limits</div>
-        <div style={bodyTxt}>
-          New address — 60 second cooldown<br />
-          Inbox refresh — 10 second cooldown<br />
-          Auto-poll interval — every 15 seconds<br />
-          <span style={{ color: lightMode ? "rgba(0,0,0,0.28)" : "rgba(255,255,255,0.3)" }}>Powered by api.mail.tm (max 8 req/s)</span>
-        </div>
+        <div style={{ ...bodyTxt, marginBottom: 14 }}>Session cookie: 30 days. Rate: 60s new / 10s refresh / 15s auto-poll.</div>
+        <button onClick={onClearCookies} style={{ ...btnStyle("ghost"), borderColor: "rgba(248,113,113,0.3)", color: "#f87171" }}><Icon.Delete size={13} /> Clear all data</button>
       </Glass>
     </div>
   );
 }
 
-// ─── Shared button style ──────────────────────────────────────────────────────
+// ─── Shared button styles ─────────────────────────────────────────────────────
 function btnStyle(variant = "ghost") {
-  const base = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500, transition: "all 0.18s", whiteSpace: "nowrap" };
+  const base = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500, transition: "all 0.18s", whiteSpace: "nowrap", border: "none" };
   if (variant === "primary") return { ...base, background: "linear-gradient(135deg,rgba(99,102,241,0.8),rgba(139,92,246,0.7))", border: "1px solid rgba(99,102,241,0.4)", color: "#fff", boxShadow: "0 2px 12px rgba(99,102,241,0.25)" };
   return { ...base, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.7)" };
 }
 
+function brutalistBtn(variant = "") {
+  const base = { display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", transition: "all 0.1s", border: "none" };
+  if (variant === "primary") return { ...base, background: "#111", color: "#f5f0e8", border: "2.5px solid #111", boxShadow: "3px 3px 0 #555" };
+  return { ...base, background: "#f5f0e8", color: "#111", border: "2.5px solid #111", boxShadow: "3px 3px 0 #999" };
+}
+
 // ─── Spinner ──────────────────────────────────────────────────────────────────
-function Spinner() {
-  return <span style={{ display: "inline-block", width: 13, height: 13, border: "2px solid rgba(255,255,255,0.15)", borderTopColor: "#818cf8", borderRadius: "50%", animation: "spin 0.65s linear infinite", flexShrink: 0 }} />;
+function Spinner({ dark = false }) {
+  return <span style={{ display: "inline-block", width: 13, height: 13, border: `2px solid ${dark ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)"}`, borderTopColor: dark ? "#111" : "#818cf8", borderRadius: "50%", animation: "spin 0.65s linear infinite", flexShrink: 0 }} />;
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState("inbox");
+
+  // theme: "dark" | "light" | "brutalist"
+  const [theme, setTheme] = useState(() => localStorage.getItem("bm_theme") || "dark");
+
   const [address, setAddress] = useState(null);
   const [token, setToken] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -979,17 +1264,22 @@ export default function App() {
   const [newCooldown, setNewCooldown] = useState(0);
   const [refreshCooldown, setRefreshCooldown] = useState(0);
   const [availableDomains, setAvailableDomains] = useState([]);
-  const [lightMode, setLightMode] = useState(false);
   const [starredIds, setStarredIds] = useState(() => new Set(JSON.parse(localStorage.getItem("bm_stars") || "[]")));
   const [search, setSearch] = useState("");
   const [deletedIds, setDeletedIds] = useState(() => new Set(JSON.parse(localStorage.getItem("bm_deleted") || "[]")));
 
-  // ── Multi-account state ──────────────────────────────────────────────────
+  // Auth state
+  const [authedUser, setAuthedUser] = useState(() => localStorage.getItem("bm_auth_user") || null);
+  const [authedToken, setAuthedToken] = useState(() => localStorage.getItem("bm_auth_token") || null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Multi-account
   const [accounts, setAccounts] = useState(() => {
     try { return JSON.parse(localStorage.getItem("bm_accounts") || "[]"); } catch { return []; }
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const brutalist = theme === "brutalist";
   const pollRef = useRef(null);
   const cdRef = useRef(null);
 
@@ -998,6 +1288,9 @@ export default function App() {
     setToasts(t => [...t, { id, msg, type }]);
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
   }, []);
+
+  // Persist theme
+  useEffect(() => { localStorage.setItem("bm_theme", theme); }, [theme]);
 
   useEffect(() => {
     cdRef.current = setInterval(() => {
@@ -1029,46 +1322,55 @@ export default function App() {
     } catch { return []; }
   }, []);
 
-  // ── Save an account to the accounts array ────────────────────────────────
+  // ── Cloud sync helpers ─────────────────────────────────────────────────────
+  const syncAddressToCloud = useCallback(async (addr, pass) => {
+    if (!authedToken || !WORKER) return;
+    try {
+      await workerFetch("/user/addresses", { method: "POST", body: JSON.stringify({ address: addr, password: pass }) }, authedToken);
+    } catch (e) {
+      console.warn("Cloud sync failed:", e.message);
+    }
+  }, [authedToken]);
+
+  const loadCloudAddresses = useCallback(async (tok) => {
+    if (!tok || !WORKER) return [];
+    try {
+      const data = await workerFetch("/user/addresses", {}, tok);
+      return data.addresses || [];
+    } catch { return []; }
+  }, []);
+
   const saveAccount = useCallback((addr, pass, tok) => {
     setAccounts(prev => {
       const filtered = prev.filter(a => a.address !== addr);
-      const next = [...filtered, { address: addr, password: pass, token: tok }];
-      // keep max 10
-      const trimmed = next.slice(-10);
-      localStorage.setItem("bm_accounts", JSON.stringify(trimmed));
-      return trimmed;
+      const next = [...filtered, { address: addr, password: pass, token: tok }].slice(-10);
+      localStorage.setItem("bm_accounts", JSON.stringify(next));
+      return next;
     });
-  }, []);
+    // also sync to cloud if signed in
+    syncAddressToCloud(addr, pass);
+  }, [syncAddressToCloud]);
 
-  // ── Switch to a saved account ─────────────────────────────────────────────
   const switchAccount = useCallback(async (acc) => {
     if (pollRef.current) clearInterval(pollRef.current);
-    setLoadingMsgs(true);
-    setMessages([]); setOpenMsg(null);
+    setLoadingMsgs(true); setMessages([]); setOpenMsg(null);
     try {
-      // Re-auth to get fresh token
       const { token: tok } = await apiFetch("/token", { method: "POST", body: JSON.stringify({ address: acc.address, password: acc.password }) });
       Cookies.set("bm", { address: acc.address, password: acc.password, token: tok });
       setAddress(acc.address); setToken(tok);
       saveAccount(acc.address, acc.password, tok);
-      await fetchMessages(tok);
-      startPolling(tok);
+      await fetchMessages(tok); startPolling(tok);
       showToast(`Switched to ${acc.address.split("@")[0]}@…`, "success");
-    } catch {
-      showToast("Could not switch inbox — token may have expired.", "error");
-    }
+    } catch { showToast("Could not switch — token expired?", "error"); }
     setLoadingMsgs(false);
   }, [fetchMessages, startPolling, saveAccount, showToast]);
 
-  // ── Remove a saved account ────────────────────────────────────────────────
   const deleteAccount = useCallback((addr) => {
     setAccounts(prev => {
       const next = prev.filter(a => a.address !== addr);
       localStorage.setItem("bm_accounts", JSON.stringify(next));
       return next;
     });
-    // if deleting active, clear it
     if (addr === address) {
       Cookies.del("bm");
       if (pollRef.current) clearInterval(pollRef.current);
@@ -1079,7 +1381,7 @@ export default function App() {
 
   const createAddress = useCallback(async (silent = false) => {
     const wait = RateLimit.check("rl_new", NEW_ADDR_LIMIT);
-    if (wait > 0) { showToast(`Wait ${Math.ceil(wait / 1000)}s before generating a new address`, "error"); return; }
+    if (wait > 0) { showToast(`Wait ${Math.ceil(wait / 1000)}s`, "error"); return; }
     if (pollRef.current) clearInterval(pollRef.current);
     setLoadingAddr(true); setMessages([]); setAddress(null); setToken(null); Cookies.del("bm");
     try {
@@ -1095,8 +1397,7 @@ export default function App() {
       saveAccount(addr, pass, tok);
       setAddress(addr); setToken(tok); setLoadingAddr(false);
       if (!silent) showToast("New address created", "success");
-      await fetchMessages(tok);
-      startPolling(tok);
+      await fetchMessages(tok); startPolling(tok);
     } catch (e) { setLoadingAddr(false); showToast("Failed: " + e.message, "error"); }
   }, [fetchDomains, fetchMessages, startPolling, saveAccount, showToast]);
 
@@ -1114,8 +1415,7 @@ export default function App() {
       saveAccount(customAddr, pass, tok);
       setAddress(customAddr); setToken(tok); setLoadingAddr(false);
       showToast("Custom address created!", "success");
-      await fetchMessages(tok);
-      startPolling(tok);
+      await fetchMessages(tok); startPolling(tok);
     } catch (e) {
       setLoadingAddr(false);
       if (e.message.includes("already") || e.message.includes("exist") || e.message.includes("422")) {
@@ -1128,9 +1428,7 @@ export default function App() {
     const wait = RateLimit.check("rl_refresh", REFRESH_LIMIT);
     if (wait > 0) { showToast(`Wait ${Math.ceil(wait / 1000)}s`, "error"); return; }
     RateLimit.mark("rl_refresh");
-    setLoadingMsgs(true);
-    await fetchMessages(token);
-    setLoadingMsgs(false);
+    setLoadingMsgs(true); await fetchMessages(token); setLoadingMsgs(false);
     showToast("Inbox refreshed", "success");
   }, [token, fetchMessages, showToast]);
 
@@ -1171,12 +1469,11 @@ export default function App() {
   }, [token]);
 
   const handleClearCookies = useCallback(() => {
-    Cookies.del("bm"); localStorage.removeItem("rl_new"); localStorage.removeItem("rl_refresh");
-    localStorage.removeItem("bm_stars"); localStorage.removeItem("bm_deleted");
-    localStorage.removeItem("bm_accounts");
+    Cookies.del("bm"); localStorage.clear();
     if (pollRef.current) clearInterval(pollRef.current);
     setAddress(null); setToken(null); setMessages([]);
     setStarredIds(new Set()); setDeletedIds(new Set()); setAccounts([]);
+    setAuthedUser(null); setAuthedToken(null);
     showToast("All data cleared", "success");
   }, [showToast]);
 
@@ -1187,6 +1484,39 @@ export default function App() {
     showToast("Copied to clipboard!", "success");
   }, [address, showToast]);
 
+  // ── Auth handlers ──────────────────────────────────────────────────────────
+  const handleAuthSuccess = useCallback(async (tok, user) => {
+    setAuthedUser(user); setAuthedToken(tok);
+    localStorage.setItem("bm_auth_user", user);
+    localStorage.setItem("bm_auth_token", tok);
+    setShowAuthModal(false);
+    showToast(`Welcome, ${user}!`, "success");
+
+    // Load cloud addresses and merge into local accounts
+    const cloudAddresses = await loadCloudAddresses(tok);
+    if (cloudAddresses.length > 0) {
+      setAccounts(prev => {
+        const merged = [...prev];
+        cloudAddresses.forEach(ca => {
+          if (!merged.find(a => a.address === ca.address)) {
+            merged.push({ address: ca.address, password: ca.password, token: null });
+          }
+        });
+        const trimmed = merged.slice(-10);
+        localStorage.setItem("bm_accounts", JSON.stringify(trimmed));
+        return trimmed;
+      });
+      showToast(`Loaded ${cloudAddresses.length} saved inbox${cloudAddresses.length > 1 ? "es" : ""}`, "success");
+    }
+  }, [loadCloudAddresses, showToast]);
+
+  const handleSignOut = useCallback(() => {
+    setAuthedUser(null); setAuthedToken(null);
+    localStorage.removeItem("bm_auth_user");
+    localStorage.removeItem("bm_auth_token");
+    showToast("Signed out", "");
+  }, [showToast]);
+
   const boot = useCallback(async () => {
     await fetchDomains();
     const saved = Cookies.get("bm");
@@ -1195,7 +1525,6 @@ export default function App() {
         const data = await apiFetch("/messages?page=1", {}, saved.token);
         setAddress(saved.address); setToken(saved.token);
         setMessages(data["hydra:member"] || []);
-        // ensure this account is in the list
         if (saved.password) saveAccount(saved.address, saved.password, saved.token);
         startPolling(saved.token); return;
       } catch {}
@@ -1207,15 +1536,18 @@ export default function App() {
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") { setOpenMsg(null); setDrawerOpen(false); }
-    };
+    const onKey = (e) => { if (e.key === "Escape") { setOpenMsg(null); setDrawerOpen(false); setShowAuthModal(false); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const visibleMessages = messages.filter(m => !deletedIds.has(m.id));
   const unread = visibleMessages.filter(m => !m.seen).length;
+
+  // ── Derived colors for text/bg from theme ─────────────────────────────────
+  const textColor = brutalist ? "#111" : "#e2e8f0";
+  const headerBg = brutalist ? "rgba(245,240,232,0.97)" : theme === "light" ? "rgba(240,240,255,0.55)" : "rgba(6,6,16,0.45)";
+  const headerBorder = brutalist ? "3px solid #111" : theme === "light" ? "1px solid rgba(0,0,0,0.07)" : "1px solid rgba(255,255,255,0.06)";
 
   return (
     <>
@@ -1228,214 +1560,198 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
         @keyframes livePulse { 0%,100%{box-shadow:0 0 0 3px rgba(74,222,128,0.2)} 50%{box-shadow:0 0 0 6px rgba(74,222,128,0.05)} }
-
-        /* nano-mail inspired: terminal cursor blink */
         .term-cursor { display:inline-block; width:7px; height:12px; background:rgba(129,140,248,0.7); margin-left:3px; vertical-align:middle; animation:termBlink 1s steps(1) infinite; }
         @keyframes termBlink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-        /* nano-mail inspired: terminal pulse on mail icon */
         @keyframes terminalPulse { 0%,100%{opacity:0.35;transform:scale(1)} 50%{opacity:0.55;transform:scale(1.06)} }
-
-        /* nano-mail inspired: subtle glitch on the address text */
         .glitch-text { position:relative; }
         .glitch-text::before,.glitch-text::after { content:attr(data-text); position:absolute; top:0; left:0; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
         .glitch-text::before { color:#818cf8; animation:glitch1 8s infinite; clip-path:polygon(0 0,100% 0,100% 35%,0 35%); opacity:0; }
         .glitch-text::after  { color:#f472b6; animation:glitch2 8s infinite; clip-path:polygon(0 65%,100% 65%,100% 100%,0 100%); opacity:0; }
         @keyframes glitch1 { 0%,94%,100%{opacity:0;transform:none} 95%{opacity:0.6;transform:translateX(-2px)} 96%{opacity:0;transform:translateX(2px)} 97%{opacity:0.4;transform:translateX(0)} }
         @keyframes glitch2 { 0%,92%,100%{opacity:0;transform:none} 93%{opacity:0.5;transform:translateX(2px)} 94%{opacity:0;transform:translateX(-1px)} 95%{opacity:0.3;transform:translateX(0)} }
-
-        /* logo glitch */
-        .logo-glitch { position:relative; display:inline-block; }
-        .logo-glitch::before { content:attr(data-text); position:absolute; inset:0; background:linear-gradient(135deg,#818cf8,#f472b6,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; animation:logoGlitch 10s infinite; opacity:0; }
-        @keyframes logoGlitch { 0%,88%,100%{opacity:0;transform:none} 89%{opacity:0.8;transform:translateX(-2px) skewX(-2deg)} 90%{opacity:0;transform:translateX(2px)} 91%{opacity:0.5;transform:none} }
-
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.2); border-radius: 4px; }
         button:focus-visible { outline: 2px solid rgba(99,102,241,0.6); outline-offset: 2px; }
-        input:focus { border-color: rgba(99,102,241,0.5) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+        input:focus { border-color: rgba(99,102,241,0.5) !important; }
         select option { background: #0f0f1e; }
-
-        /* Mobile: icons only, no nav labels */
-        @media (max-width: 540px) {
-          .nav-label { display: none !important; }
-          .nav-btn { padding: 10px 12px !important; }
-          .logo-wordmark { display: none; }
-        }
-        @media (min-width: 541px) {
-          .nav-label { display: inline; }
-          .logo-wordmark { display: inline; }
-        }
+        @media (max-width: 540px) { .nav-label { display: none !important; } .logo-wordmark { display: none; } }
+        @media (min-width: 541px) { .nav-label { display: inline; } .logo-wordmark { display: inline; } }
       `}</style>
 
       {!ready && <LoadingScreen onDone={handleLoadingDone} />}
 
       {ready && (
-        <div style={{ position: "relative", minHeight: "100vh", color: lightMode ? "#1a1a2e" : "#e2e8f0", transition: "color 0.3s ease" }}>
-          <SpotlightBg lightMode={lightMode} />
+        <div style={{ position: "relative", minHeight: "100vh", color: textColor, transition: "color 0.3s ease" }}>
+          <SpotlightBg theme={theme} />
 
           <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
-            {/* ── Header — 3-col equal-weight for true center nav ── */}
+            {/* ── Header ── */}
             <header style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
-              alignItems: "center",
-              gap: 8,
-              padding: "12px 16px",
-              borderBottom: lightMode ? "1px solid rgba(0,0,0,0.07)" : "1px solid rgba(255,255,255,0.06)",
-              background: lightMode ? "rgba(240,240,255,0.55)" : "rgba(6,6,16,0.45)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
+              display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center",
+              gap: 8, padding: "12px 16px",
+              borderBottom: headerBorder, background: headerBg,
+              backdropFilter: brutalist ? "none" : "blur(20px)",
+              WebkitBackdropFilter: brutalist ? "none" : "blur(20px)",
               position: "sticky", top: 0, zIndex: 100,
-              animation: "fadeUp 0.4s ease",
-              transition: "background 0.3s ease",
+              animation: "fadeUp 0.4s ease", transition: "background 0.3s ease",
+              boxShadow: brutalist ? "0 3px 0 #111" : "none",
             }}>
 
               {/* Left: hamburger + logo */}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {/* Hamburger button */}
-                <button
-                  onClick={() => setDrawerOpen(true)}
-                  title="Switch inbox"
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
-                    background: "rgba(255,255,255,0.06)",
-                    color: "rgba(255,255,255,0.6)",
-                    transition: "all 0.18s",
-                    flexShrink: 0,
-                    position: "relative",
-                  }}
-                >
+                <button onClick={() => setDrawerOpen(true)} title="Switch inbox" style={brutalist ? {
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 36, height: 36, border: "2.5px solid #111", cursor: "pointer",
+                  background: "#f5f0e8", color: "#111", position: "relative",
+                } : {
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
+                  background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)",
+                  transition: "all 0.18s", position: "relative",
+                }}>
                   <Icon.Hamburger size={16} />
-                  {/* badge: number of saved inboxes */}
                   {accounts.length > 1 && (
-                    <span style={{ position: "absolute", top: -4, right: -4, background: "linear-gradient(135deg,#818cf8,#a78bfa)", color: "#fff", fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", border: "1.5px solid rgba(6,6,16,0.8)" }}>
+                    <span style={{ position: "absolute", top: -5, right: -5, background: brutalist ? "#111" : "linear-gradient(135deg,#818cf8,#a78bfa)", color: brutalist ? "#f5f0e8" : "#fff", fontSize: 9, fontWeight: 700, width: 16, height: 16, borderRadius: brutalist ? 0 : "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", border: brutalist ? "1.5px solid #111" : "1.5px solid rgba(6,6,16,0.8)" }}>
                       {accounts.length}
                     </span>
                   )}
                 </button>
 
-                {/* Logo */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <img
-                    src="/mail.png" alt="BurnerMail" width={26} height={26}
-                    style={{ borderRadius: 6, display: "block" }}
-                    onError={e => e.target.style.display = "none"}
-                  />
-                  <span className="logo-wordmark logo-glitch" data-text="Burner" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", whiteSpace: "nowrap" }}>
-                    <span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Burner</span>
-                    <span style={{ color: "rgba(255,255,255,0.38)", fontWeight: 400 }}>Mail</span>
+                  <img src="/mail.png" alt="BurnerMail" width={26} height={26} style={{ borderRadius: brutalist ? 4 : 6, display: "block" }} onError={e => e.target.style.display = "none"} />
+                  <span className="logo-wordmark" style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px", whiteSpace: "nowrap" }}>
+                    {brutalist ? (
+                      <span style={{ color: "#111" }}>Burner<span style={{ fontWeight: 400, color: "#888" }}>Mail</span></span>
+                    ) : (
+                      <><span style={{ background: "linear-gradient(135deg,#818cf8,#f472b6,#a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Burner</span><span style={{ color: "rgba(255,255,255,0.38)", fontWeight: 400 }}>Mail</span></>
+                    )}
                   </span>
                 </div>
               </div>
 
-              {/* Center: nav — perfectly centered in its own column */}
+              {/* Center nav */}
               <div style={{ display: "flex", justifyContent: "center" }}>
-                <PillNav tab={tab} setTab={setTab} unread={unread} />
+                <PillNav tab={tab} setTab={setTab} unread={unread} brutalist={brutalist} />
               </div>
 
-              {/* Right: status dot */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                <div style={{
-                  width: 9, height: 9, borderRadius: "50%",
-                  background: address && !loadingAddr ? "#4ade80" : "rgba(255,255,255,0.15)",
-                  boxShadow: address && !loadingAddr ? "0 0 0 3px rgba(74,222,128,0.2)" : "none",
-                  animation: address && !loadingAddr ? "livePulse 2s infinite" : "none",
-                  flexShrink: 0,
-                }} />
+              {/* Right: sign-in button + status dot */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                {/* Sign-in / user button */}
+                <button
+                  onClick={() => authedUser ? setTab("settings") : setShowAuthModal(true)}
+                  title={authedUser ? `Signed in as ${authedUser}` : "Sign in to sync inboxes"}
+                  style={brutalist ? {
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "6px 12px", border: "2.5px solid #111",
+                    background: authedUser ? "#c8f7c5" : "#f5f0e8",
+                    cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, color: "#111",
+                    boxShadow: "2px 2px 0 #111", whiteSpace: "nowrap",
+                  } : {
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "6px 12px", borderRadius: 999,
+                    background: authedUser ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.07)",
+                    border: authedUser ? "1px solid rgba(74,222,128,0.3)" : "1px solid rgba(255,255,255,0.12)",
+                    cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 500,
+                    color: authedUser ? "#4ade80" : "rgba(255,255,255,0.55)", whiteSpace: "nowrap",
+                    transition: "all 0.18s",
+                  }}
+                >
+                  <Icon.User size={13} />
+                  <span className="nav-label">{authedUser ? authedUser : "Sign in"}</span>
+                </button>
+
+                {/* Status dot */}
+                <div style={{ width: 9, height: 9, borderRadius: brutalist ? 0 : "50%", background: address && !loadingAddr ? "#4ade80" : "rgba(128,128,128,0.3)", boxShadow: !brutalist && address && !loadingAddr ? "0 0 0 3px rgba(74,222,128,0.2)" : "none", animation: !brutalist && address && !loadingAddr ? "livePulse 2s infinite" : "none", flexShrink: 0, border: brutalist ? "1.5px solid #111" : "none" }} />
               </div>
             </header>
 
             {/* ── Main content ── */}
             <main style={{ flex: 1, maxWidth: 760, width: "100%", margin: "0 auto", padding: "28px 16px 40px" }}>
               {tab === "inbox" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: brutalist ? 14 : 20 }}>
                   <AddressCard
-                    address={address}
-                    availableDomains={availableDomains}
-                    loading={loadingAddr}
-                    onCopy={handleCopy}
-                    onNew={() => createAddress(false)}
-                    onRefresh={handleRefresh}
-                    onSetCustom={createCustomAddress}
-                    newCooldown={newCooldown}
-                    refreshCooldown={refreshCooldown}
+                    address={address} availableDomains={availableDomains} loading={loadingAddr}
+                    onCopy={handleCopy} onNew={() => createAddress(false)} onRefresh={handleRefresh}
+                    onSetCustom={createCustomAddress} newCooldown={newCooldown} refreshCooldown={refreshCooldown}
+                    brutalist={brutalist}
                   />
 
-                  <Glass style={{ overflow: "hidden", animation: "fadeUp 0.5s 80ms both ease" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
-                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                  <Glass brutalist={brutalist} style={{ overflow: "hidden", animation: "fadeUp 0.5s 80ms both ease" }}>
+                    <div style={brutalist ? {
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 18px", borderBottom: "2.5px solid #111", background: "#fff",
+                    } : {
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)",
+                    }}>
+                      <div style={{ fontFamily: brutalist ? "var(--font-display)" : "var(--font-display)", fontWeight: brutalist ? 900 : 700, fontSize: 14, display: "flex", alignItems: "center", gap: 10, color: brutalist ? "#111" : "inherit", letterSpacing: brutalist ? "-0.2px" : 0 }}>
                         <Icon.Inbox size={14} />
-                        Inbox
+                        {brutalist ? "INBOX" : "Inbox"}
                         {unread > 0 && (
-                          <span style={{ background: "linear-gradient(135deg,#818cf8,#a78bfa)", color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 999, lineHeight: "16px" }}>
+                          <span style={brutalist ? { background: "#111", color: "#f5f0e8", fontSize: 10, fontWeight: 700, padding: "2px 7px", letterSpacing: "1px" } : { background: "linear-gradient(135deg,#818cf8,#a78bfa)", color: "#fff", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 999, lineHeight: "16px" }}>
                             {unread} new
                           </span>
                         )}
                       </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "rgba(255,255,255,0.25)", letterSpacing: 1 }}>AUTO · 15s</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: brutalist ? "#888" : "rgba(255,255,255,0.25)", letterSpacing: 1 }}>AUTO · 15s</div>
                     </div>
 
-                    <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <SearchBar value={search} onChange={setSearch} />
+                    <div style={{ padding: "10px 16px", borderBottom: brutalist ? "2px solid #e8e4dc" : "1px solid rgba(255,255,255,0.05)" }}>
+                      <SearchBar value={search} onChange={setSearch} brutalist={brutalist} />
                     </div>
 
                     <InboxView
-                      messages={visibleMessages}
-                      onOpen={handleOpen}
-                      onDelete={handleDelete}
-                      onStar={handleStar}
-                      onMarkRead={handleMarkRead}
-                      loading={loadingMsgs}
-                      starredIds={starredIds}
-                      search={search}
+                      messages={visibleMessages} onOpen={handleOpen} onDelete={handleDelete}
+                      onStar={handleStar} onMarkRead={handleMarkRead} loading={loadingMsgs}
+                      starredIds={starredIds} search={search} brutalist={brutalist}
                     />
                   </Glass>
                 </div>
               )}
 
-              {tab === "guide" && <GuideView />}
+              {tab === "guide" && <GuideView brutalist={brutalist} />}
+
               {tab === "settings" && (
                 <SettingsView
-                  address={address}
-                  onClearCookies={handleClearCookies}
+                  address={address} onClearCookies={handleClearCookies}
                   onNew={() => { createAddress(false); setTab("inbox"); }}
-                  newCooldown={newCooldown}
-                  lightMode={lightMode}
-                  onToggleLight={() => setLightMode(m => !m)}
+                  newCooldown={newCooldown} theme={theme} onSetTheme={setTheme}
+                  authedUser={authedUser} onSignIn={() => setShowAuthModal(true)} onSignOut={handleSignOut}
+                  brutalist={brutalist}
                 />
               )}
             </main>
           </div>
 
-          {/* Accounts drawer */}
           <AccountsDrawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            accounts={accounts}
-            activeAddress={address}
-            onSwitch={switchAccount}
-            onDeleteAccount={deleteAccount}
-            onAddNew={() => createAddress(false)}
-            newCooldown={newCooldown}
-            loadingAddr={loadingAddr}
+            open={drawerOpen} onClose={() => setDrawerOpen(false)}
+            accounts={accounts} activeAddress={address}
+            onSwitch={switchAccount} onDeleteAccount={deleteAccount}
+            onAddNew={() => createAddress(false)} newCooldown={newCooldown}
+            loadingAddr={loadingAddr} brutalist={brutalist}
           />
 
           {openMsg && (
             <MessageViewer
-              msg={openMsg}
-              onClose={() => setOpenMsg(null)}
-              onDelete={handleDelete}
-              onStar={() => handleStar(openMsg.id)}
-              starred={starredIds.has(openMsg.id)}
+              msg={openMsg} onClose={() => setOpenMsg(null)}
+              onDelete={handleDelete} onStar={() => handleStar(openMsg.id)}
+              starred={starredIds.has(openMsg.id)} brutalist={brutalist}
             />
           )}
         </div>
       )}
 
-      <Toast toasts={toasts} />
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+          brutalist={brutalist}
+        />
+      )}
+
+      <Toast toasts={toasts} brutalist={brutalist} />
     </>
   );
 }
